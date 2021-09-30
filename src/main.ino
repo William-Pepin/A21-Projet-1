@@ -11,6 +11,7 @@ Inclure les librairies de functions que vous voulez utiliser
 **************************************************************************** */
 
 #include <LibRobus.h> // Essentielle pour utiliser RobUS
+#include <test.h>
 
 /* ****************************************************************************
 Variables globales et defines
@@ -20,14 +21,6 @@ Variables globales et defines
 // Offset
 const float pi = 3.1415926535;
 const float WHEEL_CIRCONFERENCE = 2 * pi * 1.5;
-const float SPEED = .6;
-const bool REFERENCE_WHEEEL = 0;
-const bool SLAVE_WHEEL = 1;
-const float A_SPEED_RIGHT_WHEELOFFSET = 0;
-const float B_SPEED_RIGHT_WHEELOFFSET = 0.0267;
-const float B_SPEED_RIGHT_WHEELOFFSET_BASED_ON_SPEED = 0.0445 * SPEED;
-char RobotId;
-
 const float ROBOT_CIRCONFERENCE = 2 * pi * 3.6;
 
 /* ****************************************************************************
@@ -48,7 +41,6 @@ Fonctions d'initialisation (setup)
 void setup()
 {
   BoardInit();
-  RobotId = 'B';
   delay(100);
 }
 
@@ -59,33 +51,111 @@ Fonctions de boucle infini (loop())
 
 void loop()
 {
-  avancer_distance(88);
-  tourner(90, 1);
-  avancer_distance(22);
-  tourner(90, 0);
-  avancer_distance(22);
-  tourner(90, 0);
-  avancer_distance(22);
-  tourner(90, 1);
-  exit(0);
+  Acceleration_Sur_Distance(10, .7);
+  avancer_distance(80, .7);
+  Deceleration_Sur_Distance(10, .7);
+}
+
+void correction(float speed)
+{
+  float leftEncoder = ENCODER_Read(0);
+  float rightEncoder = ENCODER_Read(1);
+  if (leftEncoder == rightEncoder)
+  {
+    // Si la roue droite tourne plus vite
+    MOTOR_SetSpeed(1, speed);
+  }
+  if (leftEncoder > rightEncoder + 1)
+  {
+    // Si la roue gauche tourne plus vite
+    MOTOR_SetSpeed(1, speed * 1.123);
+  }
+  if (leftEncoder < rightEncoder + 1)
+  {
+    // Si la roue gauche tourne plus vite
+    MOTOR_SetSpeed(1, speed - (speed * 0.123));
+  }
+}
+
+float Tour_De_Roue_Selon_Distance(float distance)
+{
+  return distance / WHEEL_CIRCONFERENCE;
+}
+
+// c la bonne
+void Acceleration_Sur_Distance(float distance, float speed)
+{
+  ENCODER_Reset(0);
+  ENCODER_Reset(1);
+  float acceleration;
+  float tourDeRoue = Tour_De_Roue_Selon_Distance(distance);
+  float encoderDesire = tourDeRoue * 3200;
+  const int segment = tourDeRoue * 8;
+  float leftEncoder = ENCODER_Read(0);
+  while (leftEncoder <= encoderDesire)
+  {
+    leftEncoder = ENCODER_Read(0);
+    acceleration = speed * leftEncoder / encoderDesire;
+    if (acceleration < 0.25)
+      acceleration = 0.25;
+    MOTOR_SetSpeed(0, acceleration);
+    MOTOR_SetSpeed(1, acceleration);
+    correction(acceleration);
+  }
+}
+
+// c la bonne
+void Deceleration_Sur_Distance(float distance, float speed)
+{
+  ENCODER_Reset(0);
+  ENCODER_Reset(1);
+  float acceleration;
+  float tourDeRoue = Tour_De_Roue_Selon_Distance(distance);
+  float encoderDesire = tourDeRoue * 3200;
+  const int segment = tourDeRoue * 8;
+  float leftEncoder = ENCODER_Read(0);
+  while (leftEncoder <= encoderDesire)
+  {
+    leftEncoder = ENCODER_Read(0);
+    acceleration = speed - speed * leftEncoder / encoderDesire;
+
+    Serial.println(acceleration);
+    MOTOR_SetSpeed(0, acceleration);
+    MOTOR_SetSpeed(1, acceleration);
+    correction(acceleration);
+  }
 }
 
 // en pouce
-void avancer_distance(float distance)
+void avancer_distance(float distance, float speed)
 {
-  float tourDeRoue = distance / WHEEL_CIRCONFERENCE;
-  avancer();
-  float encoder = ENCODER_Read(0);
-  while ((encoder / 3200) < tourDeRoue)
-  {
-    encoder = ENCODER_Read(0);
-    Serial.println(encoder);
-  }
-  stop();
   ENCODER_Reset(0);
+  ENCODER_Reset(1);
+  float tourDeRoue = Tour_De_Roue_Selon_Distance(distance);
+  float leftEncoder = ENCODER_Read(0);
+  MOTOR_SetSpeed(0, speed);
+  MOTOR_SetSpeed(1, speed);
+
+  while ((leftEncoder / 3200) < tourDeRoue)
+  {
+    leftEncoder = ENCODER_Read(0);
+    correction(speed);
+  }
+}
+void accelerate(float speed)
+{
+  float acceleration;
+  const int segment = 100;
+  for (size_t i = 0; i < segment; i++)
+  {
+    acceleration = speed * i / segment;
+    MOTOR_SetSpeed(0, acceleration);
+    MOTOR_SetSpeed(1, acceleration);
+    delay(10);
+  }
 }
 
-void tourner(float angle, bool direction)
+void tourner(float angle, bool direction, float speed)
 {
   ENCODER_Reset(0);
   ENCODER_Reset(1);
@@ -95,9 +165,9 @@ void tourner(float angle, bool direction)
   if (direction)
   {
     Serial.println("droite");
-    MOTOR_SetSpeed(0, -SPEED / 2);
+    MOTOR_SetSpeed(0, -speed / 2);
     delay(10);
-    MOTOR_SetSpeed(1, SPEED / 2);
+    MOTOR_SetSpeed(1, speed / 2);
     while ((encoder / 3200) < tourDeRoue)
     {
       encoder = ENCODER_Read(1);
@@ -107,9 +177,9 @@ void tourner(float angle, bool direction)
   else
   {
     Serial.println("gauche");
-    MOTOR_SetSpeed(0, SPEED / 2);
+    MOTOR_SetSpeed(0, speed / 2);
     delay(10);
-    MOTOR_SetSpeed(1, -(SPEED / 2));
+    MOTOR_SetSpeed(1, -(speed / 2));
     while ((encoder / 3200) < tourDeRoue)
     {
       encoder = ENCODER_Read(0);
@@ -121,23 +191,8 @@ void tourner(float angle, bool direction)
   ENCODER_Reset(0);
 }
 
-void avancer()
-{
-  if (RobotId == 'B')
-  {
-    MOTOR_SetSpeed(0, SPEED);
-    delay(10);
-    MOTOR_SetSpeed(1, SPEED + B_SPEED_RIGHT_WHEELOFFSET_BASED_ON_SPEED);
-  }
-}
-
 void stop()
 {
-  for (size_t i = 5; i > 0; i--)
-  {
-    float speed = i / 10;
-    MOTOR_SetSpeed(0, speed);
-    MOTOR_SetSpeed(1, speed + B_SPEED_RIGHT_WHEELOFFSET);
-    delay(100);
-  }
+  MOTOR_SetSpeed(0, 0);
+  MOTOR_SetSpeed(1, 0);
 }
