@@ -48,6 +48,6 @@ Fonctions de boucle infini (loop())
 // -> Se fait appeler perpetuellement suite au "setup"
 
 void loop() {
-  // SOFT_TIMER_Update(); // A decommenter pour utiliser des compteurs logiciels
+  MOTOR_SetSpeed(0,.5);
   delay(10);// Delais pour décharger le CPU
 }
