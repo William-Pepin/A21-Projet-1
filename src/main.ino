@@ -1,42 +1,10 @@
-/*
-Projet: Le nom du script
-Equipe: Votre numero d'equipe
-Auteurs: Les membres auteurs du script
-Description: Breve description du script
-Date: Derniere date de modification
-*/
+#include <LibRobus.h>
+#include <math.h>
 
-/* ****************************************************************************
-Inclure les librairies de functions que vous voulez utiliser
-**************************************************************************** */
-
-#include <LibRobus.h> // Essentielle pour utiliser RobUS
-#include <test.h>
-
-/* ****************************************************************************
-Variables globales et defines
-**************************************************************************** */
-// -> defines...
-// L'ensemble des fonctions y ont acces
-// Offset
-const float pi = 3.1415926535;
-const float WHEEL_CIRCONFERENCE = 2 * pi * 1.5;
-const float ROBOT_CIRCONFERENCE = 2 * pi * 3.6;
-
-/* ****************************************************************************
-Vos propres fonctions sont creees ici
-**************************************************************************** */
-void maFonction()
-{
-  // code
-}
-
-/* ****************************************************************************
-Fonctions d'initialisation (setup)
-**************************************************************************** */
-// -> Se fait appeler au debut du programme
-// -> Se fait appeler seulement un fois
-// -> Generalement on y initilise les varibbles globales
+const double WHEEL_CIRCONFERENCE = 2 * PI * 1.5;
+const double ROBOT_CIRCONFERENCE_RIGHT = 2 * PI * 3.75;
+const double ROBOT_CIRCONFERENCE_LEFT = 2 * PI * 3.85;
+const double MIN_SPEED = 0.07;
 
 void setup()
 {
@@ -44,154 +12,324 @@ void setup()
   delay(100);
 }
 
-/* ****************************************************************************
-Fonctions de boucle infini (loop())
-**************************************************************************** */
-// -> Se fait appeler perpetuellement suite au "setup"
-
 void loop()
 {
-  Acceleration_Sur_Distance(10, .7);
-  avancer_distance(80, .7);
-  Deceleration_Sur_Distance(10, .7);
+  //dwywwyl
 }
 
-void correction(float speed)
-{
-  float leftEncoder = ENCODER_Read(0);
-  float rightEncoder = ENCODER_Read(1);
-  if (leftEncoder == rightEncoder)
-  {
-    // Si la roue droite tourne plus vite
-    MOTOR_SetSpeed(1, speed);
-  }
-  if (leftEncoder > rightEncoder + 1)
-  {
-    // Si la roue gauche tourne plus vite
-    MOTOR_SetSpeed(1, speed * 1.123);
-  }
-  if (leftEncoder < rightEncoder + 1)
-  {
-    // Si la roue gauche tourne plus vite
-    MOTOR_SetSpeed(1, speed - (speed * 0.123));
-  }
-}
+/** Function to accelerate exponentially to a certain distance
 
-float Tour_De_Roue_Selon_Distance(float distance)
-{
-  return distance / WHEEL_CIRCONFERENCE;
-}
+@param distance, distance travelled in inches
 
-// c la bonne
-void Acceleration_Sur_Distance(float distance, float speed)
+@param speed, represents direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+*/
+void MOVEMENTS_Accelerate(double distance, double speed)
 {
-  ENCODER_Reset(0);
-  ENCODER_Reset(1);
-  float acceleration;
-  float tourDeRoue = Tour_De_Roue_Selon_Distance(distance);
-  float encoderDesire = tourDeRoue * 3200;
-  const int segment = tourDeRoue * 8;
-  float leftEncoder = ENCODER_Read(0);
-  while (leftEncoder <= encoderDesire)
+  double acceleration;
+
+  MOVEMENTS_ResetEncoder();
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance);
+  int32_t currentEncoder = MOVEMENTS_ReadEncoder();
+
+  while (currentEncoder < targetEncoder)
   {
-    leftEncoder = ENCODER_Read(0);
-    acceleration = speed * leftEncoder / encoderDesire;
-    if (acceleration < 0.25)
-      acceleration = 0.25;
-    MOTOR_SetSpeed(0, acceleration);
-    MOTOR_SetSpeed(1, acceleration);
-    correction(acceleration);
-  }
-}
+    currentEncoder = MOVEMENTS_ReadEncoder();
+    acceleration = MOVEMENTS_CalculateAcceleration(speed, currentEncoder, targetEncoder);
 
-// c la bonne
-void Deceleration_Sur_Distance(float distance, float speed)
-{
-  ENCODER_Reset(0);
-  ENCODER_Reset(1);
-  float acceleration;
-  float tourDeRoue = Tour_De_Roue_Selon_Distance(distance);
-  float encoderDesire = tourDeRoue * 3200;
-  const int segment = tourDeRoue * 8;
-  float leftEncoder = ENCODER_Read(0);
-  while (leftEncoder <= encoderDesire)
-  {
-    leftEncoder = ENCODER_Read(0);
-    acceleration = speed - speed * leftEncoder / encoderDesire;
-
+    Serial.print("accelerate : ");
     Serial.println(acceleration);
-    MOTOR_SetSpeed(0, acceleration);
-    MOTOR_SetSpeed(1, acceleration);
-    correction(acceleration);
+
+    MOVEMENTS_Forward(acceleration);
   }
+  MOVEMENTS_ResetEncoder();
 }
 
-// en pouce
-void avancer_distance(float distance, float speed)
-{
-  ENCODER_Reset(0);
-  ENCODER_Reset(1);
-  float tourDeRoue = Tour_De_Roue_Selon_Distance(distance);
-  float leftEncoder = ENCODER_Read(0);
-  MOTOR_SetSpeed(0, speed);
-  MOTOR_SetSpeed(1, speed);
+/** Function to deccelerate exponentially to a certain distance
 
-  while ((leftEncoder / 3200) < tourDeRoue)
+@param distance, distance travelled in inches
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+*/
+void MOVEMENTS_Deccelerate(double distance, double speed)
+{
+  double decceleration;
+
+  MOVEMENTS_ResetEncoder();
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance);
+  int32_t currentEncoder = MOVEMENTS_ReadEncoder();
+
+  while (currentEncoder < targetEncoder)
   {
-    leftEncoder = ENCODER_Read(0);
-    correction(speed);
+    currentEncoder = MOVEMENTS_ReadEncoder();
+    decceleration = MOVEMENTS_CalculateDecceleration(speed, currentEncoder, targetEncoder);
+
+    Serial.print("Deccelerate : ");
+    Serial.println(decceleration);
+
+    MOVEMENTS_Forward(decceleration);
   }
-}
-void accelerate(float speed)
-{
-  float acceleration;
-  const int segment = 100;
-  for (size_t i = 0; i < segment; i++)
-  {
-    acceleration = speed * i / segment;
-    MOTOR_SetSpeed(0, acceleration);
-    MOTOR_SetSpeed(1, acceleration);
-    delay(10);
-  }
+  MOVEMENTS_Stop();
+  MOVEMENTS_ResetEncoder();
 }
 
-void tourner(float angle, bool direction, float speed)
+/** Function to go accelerate until reached speed,
+ * then deccelerate at the desired distance. 
+
+@param distance, distance travelled in inches
+
+@param speed, represents direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+*/
+void MOVEMENTS_Forward(double distance, double speed)
 {
-  ENCODER_Reset(0);
-  ENCODER_Reset(1);
-  float distance = ROBOT_CIRCONFERENCE * (angle / 360);
-  float tourDeRoue = distance / WHEEL_CIRCONFERENCE;
-  float encoder = 0;
+  MOVEMENTS_Accelerate(distance * .25, speed);
+
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .50);
+  int32_t currentEncoder = MOVEMENTS_ReadEncoder();
+
+  while (currentEncoder < targetEncoder)
+  {
+    currentEncoder = MOVEMENTS_ReadEncoder();
+    MOVEMENTS_Forward(speed);
+  }
+
+  MOVEMENTS_Deccelerate(distance * .25, speed);
+}
+
+/** Function to accelerate exponentially to a certain distance while turning
+
+@param direction, 0 left, 1 right
+
+@param distance, distance travelled in inches
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+*/
+void MOVEMENTS_AccelerateTurn(bool direction, double distance, double speed)
+{
+  double acceleration;
+
+  MOVEMENTS_ResetEncoder();
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance);
+  int32_t currentEncoder = MOVEMENTS_ReadAbsEncoder();
+
+  while (currentEncoder < targetEncoder)
+  {
+    currentEncoder = MOVEMENTS_ReadAbsEncoder();
+    acceleration = MOVEMENTS_CalculateAcceleration(speed, currentEncoder, targetEncoder);
+
+    if (direction)
+      MOVEMENTS_TurnRight(acceleration);
+    else
+      MOVEMENTS_TurnLeft(acceleration);
+  }
+  MOVEMENTS_ResetEncoder();
+}
+
+/** Function to deccelerate exponentially to a certain distance while turning
+
+@param direction, 0 left, 1 right
+
+@param distance, distance travelled in inches
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+*/
+void MOVEMENTS_DeccelerateTurn(bool direction, double distance, double speed)
+{
+  double decceleration;
+
+  MOVEMENTS_ResetEncoder();
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance);
+  int32_t currentEncoder = MOVEMENTS_ReadAbsEncoder();
+
+  while (currentEncoder < targetEncoder)
+  {
+    currentEncoder = MOVEMENTS_ReadAbsEncoder();
+    decceleration = MOVEMENTS_CalculateDecceleration(speed, currentEncoder, targetEncoder);
+
+    if (direction)
+      MOVEMENTS_TurnRight(decceleration);
+    else
+      MOVEMENTS_TurnLeft(decceleration);
+  }
+  MOVEMENTS_Stop();
+  MOVEMENTS_ResetEncoder();
+}
+
+/** Function to turn smoothly to a certain angle
+
+@param direction, 0 left, 1 right
+
+@param angle, angle in degrees
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+*/
+void MOVEMENTS_Turn(bool direction, double angle, double speed)
+{
+
+  double distance = MOVEMENTS_DistanceForAngle(direction, angle);
+
+  MOVEMENTS_AccelerateTurn(direction, distance * .30, speed);
+
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .40);
+  int32_t currentEncoder = MOVEMENTS_ReadAbsEncoder();
+
+  while (currentEncoder < targetEncoder)
+  {
+    currentEncoder = MOVEMENTS_ReadAbsEncoder();
+    if (direction)
+      MOVEMENTS_TurnRight(speed);
+    else
+      MOVEMENTS_TurnLeft(speed);
+  }
+  MOVEMENTS_DeccelerateTurn(direction, distance * .30, speed);
+}
+
+/** Function to correct the right wheel based on the left wheel
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+
+*/
+double MOVEMENTS_SyncRightWheel(double speed)
+{
+  const double factor = 1.03;
+
+  double leftEncoder = abs(ENCODER_Read(0));
+  double rightEncoder = abs(ENCODER_Read(1));
+  if (leftEncoder == rightEncoder)
+    return speed;
+  else if (leftEncoder > rightEncoder + 1)
+    return speed * factor;
+  else if (leftEncoder < rightEncoder + 1)
+    return (speed - (speed * (factor - 1)));
+}
+
+/** Function to get the number of encoder ticks needed to reach a certain distance
+
+@param distance, distance travelled in inches
+
+*/
+double MOVEMENTS_EncoderForDistance(double distance)
+{
+  return (distance / WHEEL_CIRCONFERENCE) * 3200;
+}
+
+/** Function to get the number of distance to travel to reach a certain angle
+
+@param direction, 0 left, 1 right
+
+@param angle, angle in degrees
+
+*/
+double MOVEMENTS_DistanceForAngle(bool direction, double angle)
+{
+
   if (direction)
-  {
-    Serial.println("droite");
-    MOTOR_SetSpeed(0, -speed / 2);
-    delay(10);
-    MOTOR_SetSpeed(1, speed / 2);
-    while ((encoder / 3200) < tourDeRoue)
-    {
-      encoder = ENCODER_Read(1);
-      Serial.println(encoder);
-    }
-  }
-  else
-  {
-    Serial.println("gauche");
-    MOTOR_SetSpeed(0, speed / 2);
-    delay(10);
-    MOTOR_SetSpeed(1, -(speed / 2));
-    while ((encoder / 3200) < tourDeRoue)
-    {
-      encoder = ENCODER_Read(0);
-      Serial.println(encoder);
-    }
-  }
-
-  stop();
-  ENCODER_Reset(0);
+    return ROBOT_CIRCONFERENCE_RIGHT * (angle / 360);
+  return ROBOT_CIRCONFERENCE_LEFT * (angle / 360);
 }
 
-void stop()
+/** Function to calculate the acceleration based on the current encoder tick and the target encoder tick
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+
+@param currentEncoder, encoder tick at the instant
+
+@param targetEncoder, encoder tick to reach
+
+*/
+double MOVEMENTS_CalculateAcceleration(double speed, int32_t currentEncoder, int32_t targetEncoder)
+{
+  double acceleration = speed * currentEncoder / targetEncoder;
+
+  if (acceleration < MIN_SPEED)
+    acceleration = MIN_SPEED;
+
+  return acceleration;
+}
+
+/** Function to calculate the decceleartion based on the current encoder tick and the target encoder tick
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+
+@param currentEncoder, encoder tick at the instant
+
+@param targetEncoder, encoder tick to reach
+
+*/
+double MOVEMENTS_CalculateDecceleration(double speed, int32_t currentEncoder, int32_t targetEncoder)
+{
+  double decceleration = speed - speed * currentEncoder / targetEncoder;
+
+  if (decceleration < MIN_SPEED)
+    decceleration = MIN_SPEED;
+
+  return decceleration;
+}
+
+/** Function to read the main encoder */
+int32_t MOVEMENTS_ReadEncoder()
+{
+  return ENCODER_Read(0);
+}
+
+/** Function to read the absolute value of the main encoder */
+int32_t MOVEMENTS_ReadAbsEncoder()
+{
+  return abs(ENCODER_Read(0));
+}
+
+/** Function to read the main encoder and the slave encoder */
+int32_t MOVEMENTS_ResetEncoder()
+{
+  ENCODER_ReadReset(0);
+  ENCODER_ReadReset(1);
+}
+
+/** Function to turn both wheel at the same time
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+
+*/
+void MOVEMENTS_Forward(double speed)
+{
+  MOTOR_SetSpeed(0, speed);
+  MOTOR_SetSpeed(1, MOVEMENTS_SyncRightWheel(speed));
+}
+
+/** Function to turn left using both wheel
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+
+*/
+void MOVEMENTS_TurnLeft(double speed)
+{
+  MOTOR_SetSpeed(0, -speed);
+  MOTOR_SetSpeed(1, MOVEMENTS_SyncRightWheel(speed));
+}
+
+/** Function to turn right using both wheel
+
+@param speed, represents the starting direction and amplitude of PWM
+floating value between [-1.0, 1.0]
+*/
+void MOVEMENTS_TurnRight(double speed)
+{
+  MOTOR_SetSpeed(0, speed);
+  MOTOR_SetSpeed(1, -MOVEMENTS_SyncRightWheel(speed));
+}
+
+/** Function to stop both wheel at the same time */
+void MOVEMENTS_Stop()
 {
   MOTOR_SetSpeed(0, 0);
   MOTOR_SetSpeed(1, 0);
