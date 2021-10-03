@@ -5,3 +5,4 @@ build/*
 .vscode/launch.json
 .vscode/ipch
 project.checksum
+.DS_STORE
