@@ -14,7 +14,25 @@ void setup()
 
 void loop()
 {
-  //dwywwyl
+  MOVEMENTS_Forward(86, .7);
+  MOVEMENTS_Turn(0, 90, .4);
+  MOVEMENTS_Forward(22, .5);
+  MOVEMENTS_Turn(1, 91, .4);
+  MOVEMENTS_Forward(22, .5);
+  MOVEMENTS_Turn(1, 90, .4);
+  MOVEMENTS_Forward(21, .5);
+  MOVEMENTS_Turn(0, 90, .4);
+  MOVEMENTS_Forward(15, .5);
+  MOVEMENTS_Turn(1, 45, .4);
+  MOVEMENTS_Forward(21, .5);
+  MOVEMENTS_Turn(0, 90, .4);
+  MOVEMENTS_Forward(29, .5);
+  MOVEMENTS_Turn(1, 45, .4);
+  MOVEMENTS_Forward(16, .5);
+  MOVEMENTS_Turn(1, 20, .4);
+  MOVEMENTS_Forward(31, .7);
+  MOVEMENTS_Turn(1, 180, .4);
+  exit(0);
 }
 
 /** Function to accelerate exponentially to a certain distance
@@ -197,7 +215,7 @@ floating value between [-1.0, 1.0]
 */
 double MOVEMENTS_SyncRightWheel(double speed)
 {
-  const double factor = 1.03;
+  const double factor = 1.05;
 
   double leftEncoder = abs(ENCODER_Read(0));
   double rightEncoder = abs(ENCODER_Read(1));
