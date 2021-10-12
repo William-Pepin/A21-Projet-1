@@ -102,9 +102,9 @@ floating value between [-1.0, 1.0]
 */
 void MOVEMENTS_Forward(double distance, double speed)
 {
-  MOVEMENTS_Accelerate(distance * .25, speed);
+  MOVEMENTS_Accelerate(distance * .10, speed);
 
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .50);
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .80);
   int32_t currentEncoder = MOVEMENTS_ReadEncoder();
 
   while (currentEncoder < targetEncoder)
@@ -113,7 +113,7 @@ void MOVEMENTS_Forward(double distance, double speed)
     MOVEMENTS_Forward(speed);
   }
 
-  MOVEMENTS_Deccelerate(distance * .25, speed);
+  MOVEMENTS_Deccelerate(distance * .10, speed);
 }
 
 /** Function to accelerate exponentially to a certain distance while turning
@@ -191,9 +191,9 @@ void MOVEMENTS_Turn(bool direction, double angle, double speed)
 
   double distance = MOVEMENTS_DistanceForAngle(direction, angle);
 
-  MOVEMENTS_AccelerateTurn(direction, distance * .30, speed);
+  MOVEMENTS_AccelerateTurn(direction, distance * .20, speed);
 
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .40);
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .60);
   int32_t currentEncoder = MOVEMENTS_ReadAbsEncoder();
 
   while (currentEncoder < targetEncoder)
@@ -204,7 +204,7 @@ void MOVEMENTS_Turn(bool direction, double angle, double speed)
     else
       MOVEMENTS_TurnLeft(speed);
   }
-  MOVEMENTS_DeccelerateTurn(direction, distance * .30, speed);
+  MOVEMENTS_DeccelerateTurn(direction, distance * .20, speed);
 }
 
 /** Function to correct the right wheel based on the left wheel
@@ -272,7 +272,7 @@ double MOVEMENTS_CalculateAcceleration(double speed, int32_t currentEncoder, int
   return acceleration;
 }
 
-/** Function to calculate the decceleartion based on the current encoder tick and the target encoder tick
+/** Function to calculate the decceleration based on the current encoder tick and the target encoder tick
 
 @param speed, represents the starting direction and amplitude of PWM
 floating value between [-1.0, 1.0]
