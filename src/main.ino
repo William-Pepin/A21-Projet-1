@@ -14,8 +14,6 @@ void setup()
 
 void loop()
 {
-  MOVEMENTS_Forward(87, .7);
-  MOVEMENTS_Turn(0, 90, .4);
   exit(0);
 }
 
