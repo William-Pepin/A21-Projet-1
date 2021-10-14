@@ -14,24 +14,8 @@ void setup()
 
 void loop()
 {
-  MOVEMENTS_Forward(86, .7);
+  MOVEMENTS_Forward(87, .7);
   MOVEMENTS_Turn(0, 90, .4);
-  MOVEMENTS_Forward(22, .5);
-  MOVEMENTS_Turn(1, 91, .4);
-  MOVEMENTS_Forward(22, .5);
-  MOVEMENTS_Turn(1, 90, .4);
-  MOVEMENTS_Forward(21, .5);
-  MOVEMENTS_Turn(0, 90, .4);
-  MOVEMENTS_Forward(15, .5);
-  MOVEMENTS_Turn(1, 45, .4);
-  MOVEMENTS_Forward(21, .5);
-  MOVEMENTS_Turn(0, 90, .4);
-  MOVEMENTS_Forward(29, .5);
-  MOVEMENTS_Turn(1, 45, .4);
-  MOVEMENTS_Forward(16, .5);
-  MOVEMENTS_Turn(1, 20, .4);
-  MOVEMENTS_Forward(31, .7);
-  MOVEMENTS_Turn(1, 180, .4);
   exit(0);
 }
 
@@ -54,9 +38,6 @@ void MOVEMENTS_Accelerate(double distance, double speed)
   {
     currentEncoder = MOVEMENTS_ReadEncoder();
     acceleration = MOVEMENTS_CalculateAcceleration(speed, currentEncoder, targetEncoder);
-
-    Serial.print("accelerate : ");
-    Serial.println(acceleration);
 
     MOVEMENTS_Forward(acceleration);
   }
@@ -82,9 +63,6 @@ void MOVEMENTS_Deccelerate(double distance, double speed)
   {
     currentEncoder = MOVEMENTS_ReadEncoder();
     decceleration = MOVEMENTS_CalculateDecceleration(speed, currentEncoder, targetEncoder);
-
-    Serial.print("Deccelerate : ");
-    Serial.println(decceleration);
 
     MOVEMENTS_Forward(decceleration);
   }
