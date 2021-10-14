@@ -14,7 +14,12 @@ void setup()
 
 void loop()
 {
-  exit(0);
+  MOVEMENTS_Forward(86, .8);
+  delay(10);
+  MOVEMENTS_Forward(24, .6);
+  delay(10);
+  MOVEMENTS_Turn(1, 180, .4);
+  delay(10);
 }
 
 /** Function to accelerate exponentially to a certain distance
@@ -80,7 +85,7 @@ void MOVEMENTS_Forward(double distance, double speed)
 {
   MOVEMENTS_Accelerate(distance * .10, speed);
 
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .80);
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .70);
   int32_t currentEncoder = MOVEMENTS_ReadEncoder();
 
   while (currentEncoder < targetEncoder)
@@ -89,7 +94,7 @@ void MOVEMENTS_Forward(double distance, double speed)
     MOVEMENTS_Forward(speed);
   }
 
-  MOVEMENTS_Deccelerate(distance * .10, speed);
+  MOVEMENTS_Deccelerate(distance * .20, speed);
 }
 
 /** Function to accelerate exponentially to a certain distance while turning
