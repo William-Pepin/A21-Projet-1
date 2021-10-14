@@ -14,24 +14,6 @@ void setup()
 
 void loop()
 {
-  MOVEMENTS_Forward(86, .7);
-  MOVEMENTS_Turn(0, 90, .4);
-  MOVEMENTS_Forward(22, .5);
-  MOVEMENTS_Turn(1, 91, .4);
-  MOVEMENTS_Forward(22, .5);
-  MOVEMENTS_Turn(1, 90, .4);
-  MOVEMENTS_Forward(21, .5);
-  MOVEMENTS_Turn(0, 90, .4);
-  MOVEMENTS_Forward(15, .5);
-  MOVEMENTS_Turn(1, 45, .4);
-  MOVEMENTS_Forward(21, .5);
-  MOVEMENTS_Turn(0, 90, .4);
-  MOVEMENTS_Forward(29, .5);
-  MOVEMENTS_Turn(1, 45, .4);
-  MOVEMENTS_Forward(16, .5);
-  MOVEMENTS_Turn(1, 20, .4);
-  MOVEMENTS_Forward(31, .7);
-  MOVEMENTS_Turn(1, 180, .4);
   exit(0);
 }
 
@@ -54,9 +36,6 @@ void MOVEMENTS_Accelerate(double distance, double speed)
   {
     currentEncoder = MOVEMENTS_ReadEncoder();
     acceleration = MOVEMENTS_CalculateAcceleration(speed, currentEncoder, targetEncoder);
-
-    Serial.print("accelerate : ");
-    Serial.println(acceleration);
 
     MOVEMENTS_Forward(acceleration);
   }
@@ -83,9 +62,6 @@ void MOVEMENTS_Deccelerate(double distance, double speed)
     currentEncoder = MOVEMENTS_ReadEncoder();
     decceleration = MOVEMENTS_CalculateDecceleration(speed, currentEncoder, targetEncoder);
 
-    Serial.print("Deccelerate : ");
-    Serial.println(decceleration);
-
     MOVEMENTS_Forward(decceleration);
   }
   MOVEMENTS_Stop();
@@ -102,9 +78,9 @@ floating value between [-1.0, 1.0]
 */
 void MOVEMENTS_Forward(double distance, double speed)
 {
-  MOVEMENTS_Accelerate(distance * .25, speed);
+  MOVEMENTS_Accelerate(distance * .10, speed);
 
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .50);
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .80);
   int32_t currentEncoder = MOVEMENTS_ReadEncoder();
 
   while (currentEncoder < targetEncoder)
@@ -113,7 +89,7 @@ void MOVEMENTS_Forward(double distance, double speed)
     MOVEMENTS_Forward(speed);
   }
 
-  MOVEMENTS_Deccelerate(distance * .25, speed);
+  MOVEMENTS_Deccelerate(distance * .10, speed);
 }
 
 /** Function to accelerate exponentially to a certain distance while turning
@@ -191,9 +167,9 @@ void MOVEMENTS_Turn(bool direction, double angle, double speed)
 
   double distance = MOVEMENTS_DistanceForAngle(direction, angle);
 
-  MOVEMENTS_AccelerateTurn(direction, distance * .30, speed);
+  MOVEMENTS_AccelerateTurn(direction, distance * .20, speed);
 
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .40);
+  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .60);
   int32_t currentEncoder = MOVEMENTS_ReadAbsEncoder();
 
   while (currentEncoder < targetEncoder)
@@ -204,7 +180,7 @@ void MOVEMENTS_Turn(bool direction, double angle, double speed)
     else
       MOVEMENTS_TurnLeft(speed);
   }
-  MOVEMENTS_DeccelerateTurn(direction, distance * .30, speed);
+  MOVEMENTS_DeccelerateTurn(direction, distance * .20, speed);
 }
 
 /** Function to correct the right wheel based on the left wheel
@@ -272,7 +248,7 @@ double MOVEMENTS_CalculateAcceleration(double speed, int32_t currentEncoder, int
   return acceleration;
 }
 
-/** Function to calculate the decceleartion based on the current encoder tick and the target encoder tick
+/** Function to calculate the decceleration based on the current encoder tick and the target encoder tick
 
 @param speed, represents the starting direction and amplitude of PWM
 floating value between [-1.0, 1.0]
