@@ -13,13 +13,15 @@ void setup()
 {
   BoardInit();
   delay(100);
+  Serial.println("hello");
+  Serial.print("hello");
  
 }
 
 void loop()
 {
     //ColorCapteurRawData();
-    Serial.print("hello");
+    Serial.println("hello");
 }
 
 
