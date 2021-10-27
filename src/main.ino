@@ -20,12 +20,8 @@ void setup()
 
 void loop()
 {
-  while(1)
-  {
     //ColorCapteurRawData();
-    printf(" %c  %c  %c  %c ", r, g, b, c);
-    printf( "hello");
-  }
+    Serial.print("hello");
 }
 
 
