@@ -9,6 +9,8 @@
 #define INTEGRATIONTIME (0xEB)
 #define GAIN (0x01)
 
+int r= 0 , g, c, b;
+
 void setup()
 {
   BoardInit();
@@ -18,10 +20,12 @@ void setup()
 
 void loop()
 {
-
-  
-  
-
+  while(1)
+  {
+    //ColorCapteurRawData();
+    printf(" %c  %c  %c  %c ", r, g, b, c);
+    printf( "hello");
+  }
 }
 
 
@@ -96,6 +100,15 @@ void setGain(uint8_t gain)
   ColorCapteurWrite8(0x0F, gain);
 }
 
+
+void ColorCapteurRawData()
+{
+  c = ColorCapteurRead16(0x14);
+  r = ColorCapteurRead16(0x16);
+  g = ColorCapteurRead16(0x18);
+  b = ColorCapteurRead16(0x1A);
+  delay(50);
+}
 
 
 
