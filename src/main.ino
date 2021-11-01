@@ -100,23 +100,23 @@ void MesureSuiveur(){
 
 void AjustementDirection(){
     if(StateDirection==0){
-        MOTOR_SetSpeed(0,-0.15);
-        MOTOR_SetSpeed(1,-0.15);
+        MOTOR_SetSpeed(0,-0.23);
+        MOTOR_SetSpeed(1,-0.23);
     }
     Serial.println(StateDirection);
         ENCODER_Reset(0);
         ENCODER_Reset(1);
         if(StateDirection==3){
-            MOTOR_SetSpeed(0,-0.15);
-            MOTOR_SetSpeed(1,-0.15);
+            MOTOR_SetSpeed(0,-0.23);
+            MOTOR_SetSpeed(1,-0.23);
         }
         if(StateDirection==2){
-            MOTOR_SetSpeed(0,-0.05);
-            MOTOR_SetSpeed(1,-0.15);
+            MOTOR_SetSpeed(0,0);
+            MOTOR_SetSpeed(1,-0.23);
         }
         if(StateDirection==4){
-            MOTOR_SetSpeed(0,-0.15);
-            MOTOR_SetSpeed(1,-0.05);
+            MOTOR_SetSpeed(0,-0.23);
+            MOTOR_SetSpeed(1,0);
         }
     
 }
