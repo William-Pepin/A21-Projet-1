@@ -24,11 +24,9 @@ void loop()
 }
 
 void MesureSuiveur(){
-    if (Timer==100){
-        //prendre mesure du suiveur=mesure
-
+    if (Timer==150){
         /*
-        Mesure de tension du capteur:   V1 (rouge)   |   V2 (jaune)   |   V3 (rouge)   |   V4 (bleu)   |   Mesure:
+        StateDirection:                V1 (rouge)   |   V2 (jaune)   |   V3 (rouge)   |   V4 (bleu)   |   Mesure Analogique:
         1                                                                                                    8
         2                                    X                                                               540
         3                                                    X                                               273
@@ -49,7 +47,6 @@ void MesureSuiveur(){
         Mesures triées: 8; 72; 145; 216; 273; 341; 410; 477; 540; 606; 677; 742; 807; 872; 942; 1008
         */
         int mesure = analogRead(A6);
-        Serial.println(mesure);
         if(mesure<40){
             StateDirection=1;
         }
@@ -102,26 +99,30 @@ void MesureSuiveur(){
 }
 
 void AjustementDirection(){
-    if(ENCODER_Read(0)<=250 && ENCODER_Read(1)<=250){
+    if(StateDirection==0){
+        MOTOR_SetSpeed(0,-0.15);
+        MOTOR_SetSpeed(1,-0.15);
+    }
+    Serial.println(StateDirection);
         ENCODER_Reset(0);
         ENCODER_Reset(1);
-        if(StateDirection==0 || StateDirection==3 || StateDirection==10 || StateDirection==13){
-            MOTOR_SetSpeed(0,0.2);
-            MOTOR_SetSpeed(1,0.2);
+        if(StateDirection==3){
+            MOTOR_SetSpeed(0,-0.15);
+            MOTOR_SetSpeed(1,-0.15);
         }
         if(StateDirection==2){
-            MOTOR_SetSpeed(0,0.1);
-            MOTOR_SetSpeed(1,0.2);
+            MOTOR_SetSpeed(0,-0.05);
+            MOTOR_SetSpeed(1,-0.15);
         }
         if(StateDirection==4){
-            MOTOR_SetSpeed(0,0.2);
-            MOTOR_SetSpeed(1,0.1);
+            MOTOR_SetSpeed(0,-0.15);
+            MOTOR_SetSpeed(1,-0.05);
         }
-    }
+    
 }
 
 void TimerUpdate(){
-    if(Timer==100){
+    if(Timer==150){
         Timer=0;
     }
     delay(10);
