@@ -21,10 +21,10 @@ void loop()
     AjustementDirection();
     MesureSuiveur();
     TimerUpdate();
+    Serial.println(StateDirection);
 }
 
 void MesureSuiveur(){
-    if (Timer==150){
         /*
         StateDirection:                V1 (rouge)   |   V2 (jaune)   |   V3 (rouge)   |   V4 (bleu)   |   Mesure Analogique:
         1                                                                                                    8
@@ -95,36 +95,36 @@ void MesureSuiveur(){
         else if(mesure>=975){
             StateDirection=16;
         }
-    }
 }
 
 void AjustementDirection(){
+    if(Timer==10){
     if(StateDirection==0){
-        MOTOR_SetSpeed(0,-0.23);
-        MOTOR_SetSpeed(1,-0.23);
+        MOTOR_SetSpeed(0,-0.4);
+        MOTOR_SetSpeed(1,-0.4);
     }
-    Serial.println(StateDirection);
+
         ENCODER_Reset(0);
         ENCODER_Reset(1);
         if(StateDirection==3){
-            MOTOR_SetSpeed(0,-0.23);
-            MOTOR_SetSpeed(1,-0.23);
+            MOTOR_SetSpeed(0,-0.4);
+            MOTOR_SetSpeed(1,-0.4);
         }
         if(StateDirection==2){
-            MOTOR_SetSpeed(0,0);
-            MOTOR_SetSpeed(1,-0.23);
+            MOTOR_SetSpeed(0,-0.1);
+            MOTOR_SetSpeed(1,-0.4);
         }
         if(StateDirection==4){
-            MOTOR_SetSpeed(0,-0.23);
-            MOTOR_SetSpeed(1,0);
+            MOTOR_SetSpeed(0,-0.4);
+            MOTOR_SetSpeed(1,-0.1);
         }
-    
+    }
 }
 
 void TimerUpdate(){
-    if(Timer==150){
+    if(Timer==10){
         Timer=0;
     }
-    delay(10);
-    Timer+=10;
+    delay(5);
+    Timer+=5;
 }
