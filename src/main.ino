@@ -22,7 +22,7 @@ void setup()
 
 void loop()
 {
-  AjustementDirection();
+  //AjustementDirection();
   MesureSuiveur();
   TimerUpdate();
   Serial.println(StateDirection);
@@ -145,8 +145,6 @@ void AjustementDirection()
       MOTOR_SetSpeed(1, -0.4);
     }
 
-    ENCODER_Reset(0);
-    ENCODER_Reset(1);
     if (StateDirection == 3)
     {
       MOTOR_SetSpeed(0, -0.4);
