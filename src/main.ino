@@ -1,18 +1,17 @@
 #include <LibRobus.h>
 #include <math.h>
 
-bool StateSignalSonore = false;
-bool StateQuilleTombee = false;
-bool StateCrossroad = false;
+int StateSignalSonore = 0;
+int StateQuilleTombee = 0;
 int StateCouleur = 0; //noir=0, blanc=1, rouge=2, etc.
-float AnglePIDGauche = 20;
-float AnglePIDDroit = 340;
 int StateDirection = 0;
 int Timer = 0;
 int shouldTurnRight = 0;
 int shouldTurnLeft = 0;
-
-bool isQuilleTomber = 0; // A moduler avec la quille
+const double WHEEL_CIRCONFERENCE = 2 * PI * 1.5;
+const double ROBOT_CIRCONFERENCE_RIGHT = 2 * PI * 3.75;
+const double ROBOT_CIRCONFERENCE_LEFT = 2 * PI * 3.85;
+const double MIN_SPEED = 0.07;
 
 void setup()
 {
@@ -24,14 +23,33 @@ void loop()
 {
   AjustementDirection();
   MesureSuiveur();
+  MesureSonar();
   TimerUpdate();
-  Serial.println(StateDirection);
+  Serial.println(StateQuilleTombee);
 }
 
-void sonar(){
-  if(Timer == 250){
-  float distance = SONAR_GetRange(0);
-  return distance;
+void MesureSonar(){
+  if(Timer == 100){
+    if(StateSignalSonore > 10){
+      float Distance = SONAR_GetRange(0);
+      if(Distance < 35){
+        delay(200);
+        MOTOR_SetSpeed(0, 0);
+        MOTOR_SetSpeed(1, 0);
+        MOVEMENTS_Turn(0, 95, 0.5);
+        MOVEMENTS_Forward(Distance + 4.0, 0.7);
+        MOVEMENTS_Turn(1, 180, 0.5);
+        MOVEMENTS_Forward(Distance + 4.0, 0.7);
+        MOTOR_SetSpeed(0, -0.15);
+        MOTOR_SetSpeed(1, 0.15);
+        StateSignalSonore = 0;
+        StateQuilleTombee = 1;
+        StateDirection = 0;
+      }
+    }
+    else{
+      StateSignalSonore = 0;
+    }
   }
 }
 
@@ -62,20 +80,26 @@ void MesureSuiveur()
   int mesureGauche = analogRead(A7);
   int mesureDroite = analogRead(A5);
 
-  if (mesureDroite < 300)
+  if (mesureDroite < 150)
     shouldTurnRight++;
-  else if (mesureGauche < 600)
-    shouldTurnLeft++;
   else
   {
     shouldTurnRight = 0;
+  }
+  if (mesureGauche < 600)
+    shouldTurnLeft++;
+  else
+  {
     shouldTurnLeft = 0;
   }
 
-  if (shouldTurnRight > 4 && isQuilleTomber)
-    StateDirection = 17;
-  else if (shouldTurnLeft > 4 && isQuilleTomber)
-    StateDirection = 18;
+
+  if ((shouldTurnLeft > 4 || shouldTurnRight > 4) && StateQuilleTombee == 7)
+    StateQuilleTombee = 5;
+  else if (shouldTurnRight > 4 && StateQuilleTombee == 2)
+    StateQuilleTombee = 3;
+  else if (shouldTurnLeft > 4 && StateQuilleTombee == 2)
+    StateQuilleTombee = 4;
   else if (mesure < 40)
   {
     StateDirection = 1;
@@ -83,7 +107,7 @@ void MesureSuiveur()
   else if (mesure >= 40 && mesure < 105)
   {
     StateDirection = 5;
-    StateSignalSonore = true;
+    StateSignalSonore++;
   }
   else if (mesure >= 105 && mesure < 180)
   {
@@ -92,7 +116,7 @@ void MesureSuiveur()
   else if (mesure >= 180 && mesure < 245)
   {
     StateDirection = 8;
-    StateSignalSonore = true;
+    StateSignalSonore++;
   }
   else if (mesure >= 245 && mesure < 300)
   {
@@ -101,7 +125,7 @@ void MesureSuiveur()
   else if (mesure >= 300 && mesure < 375)
   {
     StateDirection = 10;
-    StateSignalSonore = true;
+    StateSignalSonore++;
   }
   else if (mesure >= 375 && mesure < 440)
   {
@@ -110,7 +134,7 @@ void MesureSuiveur()
   else if (mesure >= 440 && mesure < 500)
   {
     StateDirection = 13;
-    StateSignalSonore = true;
+    StateSignalSonore++;
   }
   else if (mesure >= 500 && mesure < 575)
   {
@@ -119,7 +143,7 @@ void MesureSuiveur()
   else if (mesure >= 575 && mesure < 640)
   {
     StateDirection = 11;
-    StateSignalSonore = true;
+    StateSignalSonore++;
   }
   else if (mesure >= 640 && mesure < 700)
   {
@@ -128,7 +152,7 @@ void MesureSuiveur()
   else if (mesure >= 700 && mesure < 775)
   {
     StateDirection = 15;
-    StateSignalSonore = true;
+    StateSignalSonore++;
   }
   else if (mesure >= 775 && mesure < 840)
   {
@@ -137,7 +161,7 @@ void MesureSuiveur()
   else if (mesure >= 840 && mesure < 900)
   {
     StateDirection = 14;
-    StateSignalSonore = true;
+    StateSignalSonore++;
   }
   else if (mesure >= 900 && mesure < 975)
   {
@@ -146,7 +170,7 @@ void MesureSuiveur()
   else if (mesure >= 975)
   {
     StateDirection = 16;
-    StateSignalSonore = true;
+    StateSignalSonore++;
   }
 }
 
@@ -159,44 +183,75 @@ void AjustementDirection()
       MOTOR_SetSpeed(0, -0.4);
       MOTOR_SetSpeed(1, -0.4);
     }
-
-    if (StateDirection == 3 || StateDirection == 10)
+    else if (StateDirection == 3 && StateQuilleTombee == 1)
+    {
+      MOTOR_SetSpeed(0, -0.4);
+      MOTOR_SetSpeed(1, -0.4);
+      StateQuilleTombee = 2;
+      shouldTurnLeft = 0;
+      shouldTurnRight = 0;
+    }
+    else if (StateDirection == 3 && StateQuilleTombee == 6)
+    {
+      MOTOR_SetSpeed(0, -0.2);
+      MOTOR_SetSpeed(1, -0.2);
+      StateQuilleTombee = 7;
+    }
+    else if ((StateDirection == 3 || StateDirection == 10) && (StateQuilleTombee == 0 || StateQuilleTombee == 2))
     {
       MOTOR_SetSpeed(0, -0.4);
       MOTOR_SetSpeed(1, -0.4);
     }
-    if (StateDirection == 2 || StateDirection == 11)
+    else if ((StateDirection == 2 || StateDirection == 11) && (StateQuilleTombee == 0 || StateQuilleTombee == 2))
     {
       MOTOR_SetSpeed(0, -0.1);
       MOTOR_SetSpeed(1, -0.4);
     }
-    if (StateDirection == 4 || StateDirection == 8)
+    else if ((StateDirection == 4 || StateDirection == 8) && (StateQuilleTombee == 0 || StateQuilleTombee == 2))
     {
       MOTOR_SetSpeed(0, -0.4);
       MOTOR_SetSpeed(1, -0.1);
     }
-    if (StateDirection == 17)
+    else if ((StateDirection == 3 || StateDirection == 10) && StateQuilleTombee == 7)
+    {
+      MOTOR_SetSpeed(0, -0.2);
+      MOTOR_SetSpeed(1, -0.2);
+    }
+    else if ((StateDirection == 2 || StateDirection == 11) && StateQuilleTombee == 7)
+    {
+      MOTOR_SetSpeed(0, -0.0);
+      MOTOR_SetSpeed(1, -0.2);
+    }
+    else if ((StateDirection == 4 || StateDirection == 8) && StateQuilleTombee == 7)
+    {
+      MOTOR_SetSpeed(0, -0.2);
+      MOTOR_SetSpeed(1, -0.0);
+    }
+    else if (StateQuilleTombee == 3)
+    {
+      MOTOR_SetSpeed(0, 0.15);
+      MOTOR_SetSpeed(1, -0.15);
+      StateQuilleTombee = 6;
+      delay(400);
+    }
+    else if (StateQuilleTombee == 4)
+    {
+      MOTOR_SetSpeed(0, -0.15);
+      MOTOR_SetSpeed(1, 0.15);
+      StateQuilleTombee = 6;
+      delay(400);
+    }
+    else if (StateQuilleTombee == 5)
     {
       MOTOR_SetSpeed(0, 0);
-      MOTOR_SetSpeed(1, -0.4);
-      delay(500);
-      MOTOR_SetSpeed(0, -0.4);
-      MOTOR_SetSpeed(1, -0.4);
-    }
-    if (StateDirection == 18)
-    {
-      MOTOR_SetSpeed(0, -0.4);
       MOTOR_SetSpeed(1, 0);
-      delay(500);
-      MOTOR_SetSpeed(0, -0.4);
-      MOTOR_SetSpeed(1, -0.4);
     }
   }
 }
 
 void TimerUpdate()
 {
-  if (Timer == 250)
+  if (Timer == 100)
   {
     Timer = 0;
   }
