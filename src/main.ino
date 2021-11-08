@@ -15,17 +15,21 @@ const double WHEEL_CIRCONFERENCE = 2 * PI * 1.5;
 const double ROBOT_CIRCONFERENCE_RIGHT = 2 * PI * 3.75;
 const double ROBOT_CIRCONFERENCE_LEFT = 2 * PI * 3.85;
 const double MIN_SPEED = 0.07;
+uint8_t couleur = 0;
+;
 
 void setup()
 {
   BoardInit();
   ColorCapteurBegin();
+  SERVO_Enable(0);
+  SERVO_SetAngle(0, 115);
   delay(100);
 }
 
 void loop()
 {
-  while (isLineFollowingDone)
+  while (!(LineFollowerLeftDone && LineFollowerRightDone))
   {
     AjustementDirection();
     MesureSuiveur();
@@ -33,10 +37,90 @@ void loop()
     TimerUpdate();
     Serial.println(StateQuilleTombee);
   }
-  MOVEMENTS_Turn(0, 180, 0.4);
+  CouleurSequence();
+  delay(1000);
+  SERVO_Disable(0);
+  StateQuilleTombee = 0;
+  LineFollowerLeftDone = false;
+  LineFollowerRightDone = false;
+}
+void TesterValeur()
+{
+  int mesureGauche = analogRead(A7);
+  int mesureDroite = analogRead(A5);
+  Serial.print("Gauche : ");
+  Serial.println(mesureGauche);
+  Serial.print("Droite : ");
+  Serial.println(mesureDroite);
+  delay(1000);
+}
+
+void TesterCouleur()
+{
   uint8_t couleur = GetCouleur();
-  exit(0);
-  //CHU RENDU LA
+  Serial.println(couleur);
+  bool isBlue = couleur == BLUE;
+  bool isRed = couleur == RED;
+  bool isYellow = couleur == YELLOW;
+  Serial.println(isBlue);
+  Serial.println(isRed);
+  Serial.println(isYellow);
+  delay(1000);
+}
+
+void CouleurSequence()
+{
+  MOVEMENTS_Turn(0, 180, 0.4);
+  MOVEMENTS_Forward(10, 0.4);
+  uint8_t couleur = GetCouleur();
+  Serial.println(couleur);
+
+  CAGE_Open();
+  MOVEMENTS_Forward(10.8, 0.4);
+  CAGE_Close();
+
+  if (couleur == BLUE)
+  {
+    // Bleu
+    MOVEMENTS_Turn(0, 90, 0.4);
+    MOVEMENTS_Forward(16, 0.4);
+    MOVEMENTS_Turn(1, 90, 0.4);
+    MOVEMENTS_Forward(90, 0.8);
+    CAGE_Open();
+  }
+  else if (couleur == RED)
+  {
+    // Rouge
+    MOVEMENTS_Forward(90, 0.8);
+    CAGE_Open();
+  }
+  else
+  {
+    // Jaune
+    MOVEMENTS_Turn(1, 90, 0.4);
+    MOVEMENTS_Forward(20, 0.4);
+    MOVEMENTS_Turn(0, 90, 0.4);
+    MOVEMENTS_Forward(90, 0.8);
+    CAGE_Open();
+  }
+  MOTOR_SetSpeed(0, -.4);
+  MOTOR_SetSpeed(1, -.4);
+  delay(1000);
+  MOTOR_SetSpeed(0, 0);
+  MOTOR_SetSpeed(1, 0);
+  CAGE_Close();
+  MOVEMENTS_Turn(1, 180, 0.4);
+  MOVEMENTS_Forward(120, .8);
+}
+
+void CAGE_Open()
+{
+  SERVO_SetAngle(0, 15);
+}
+
+void CAGE_Close()
+{
+  SERVO_SetAngle(0, 115);
 }
 
 void MesureSonar()
@@ -51,10 +135,10 @@ void MesureSonar()
         delay(200);
         MOTOR_SetSpeed(0, 0);
         MOTOR_SetSpeed(1, 0);
-        MOVEMENTS_Turn(0, 105, 0.5);
-        MOVEMENTS_Forward(Distance + 4.0, 0.7);
+        MOVEMENTS_Turn(0, 100, 0.5);
+        MOVEMENTS_Forward(Distance - 5, 0.7);
         MOVEMENTS_Turn(1, 180, 0.5);
-        MOVEMENTS_Forward(Distance + 4.0, 0.7);
+        MOVEMENTS_Forward(Distance - 5, 0.7);
         MOTOR_SetSpeed(0, -0.15);
         MOTOR_SetSpeed(1, 0.15);
         StateSignalSonore = 0;
@@ -96,13 +180,13 @@ void MesureSuiveur()
   int mesureGauche = analogRead(A7);
   int mesureDroite = analogRead(A5);
 
-  if (mesureDroite < 150)
+  if (mesureDroite < 850)
     shouldTurnRight++;
   else
   {
     shouldTurnRight = 0;
   }
-  if (mesureGauche < 600)
+  if (mesureGauche < 650)
     shouldTurnLeft++;
   else
   {
@@ -118,7 +202,7 @@ void MesureSuiveur()
 
   if (shouldTurnRight > 4 && StateQuilleTombee == 7)
   {
-    delay(50);
+    delay(35);
     MOTOR_SetSpeed(0, 0);
     StateDirection = -1;
     LineFollowerRightDone = true;
@@ -269,11 +353,11 @@ void AjustementDirection()
       StateQuilleTombee = 6;
       delay(400);
     }
-    else if (StateQuilleTombee == 5)
-    {
-      MOTOR_SetSpeed(0, 0);
-      MOTOR_SetSpeed(1, 0);
-    }
+    //else if (StateQuilleTombee == 5)
+    //{
+    //  MOTOR_SetSpeed(0, 0);
+    //  MOTOR_SetSpeed(1, 0);
+    //}
   }
 }
 
