@@ -1,5 +1,6 @@
 #include <LibRobus.h>
 #include <math.h>
+#include "CapteurCouleur.h"
 
 int StateSignalSonore = 0;
 int StateQuilleTombee = 0;
@@ -8,6 +9,8 @@ int StateDirection = 0;
 int Timer = 0;
 int shouldTurnRight = 0;
 int shouldTurnLeft = 0;
+bool LineFollowerRightDone = false;
+bool LineFollowerLeftDone = false;
 const double WHEEL_CIRCONFERENCE = 2 * PI * 1.5;
 const double ROBOT_CIRCONFERENCE_RIGHT = 2 * PI * 3.75;
 const double ROBOT_CIRCONFERENCE_LEFT = 2 * PI * 3.85;
@@ -16,27 +19,39 @@ const double MIN_SPEED = 0.07;
 void setup()
 {
   BoardInit();
+  ColorCapteurBegin();
   delay(100);
 }
 
 void loop()
 {
-  AjustementDirection();
-  MesureSuiveur();
-  MesureSonar();
-  TimerUpdate();
-  Serial.println(StateQuilleTombee);
+  while (isLineFollowingDone)
+  {
+    AjustementDirection();
+    MesureSuiveur();
+    MesureSonar();
+    TimerUpdate();
+    Serial.println(StateQuilleTombee);
+  }
+  MOVEMENTS_Turn(0, 180, 0.4);
+  uint8_t couleur = GetCouleur();
+  exit(0);
+  //CHU RENDU LA
 }
 
-void MesureSonar(){
-  if(Timer == 100){
-    if(StateSignalSonore > 10){
+void MesureSonar()
+{
+  if (Timer == 100)
+  {
+    if (StateSignalSonore > 10)
+    {
       float Distance = SONAR_GetRange(0);
-      if(Distance < 35){
+      if (Distance < 35)
+      {
         delay(200);
         MOTOR_SetSpeed(0, 0);
         MOTOR_SetSpeed(1, 0);
-        MOVEMENTS_Turn(0, 95, 0.5);
+        MOVEMENTS_Turn(0, 105, 0.5);
         MOVEMENTS_Forward(Distance + 4.0, 0.7);
         MOVEMENTS_Turn(1, 180, 0.5);
         MOVEMENTS_Forward(Distance + 4.0, 0.7);
@@ -47,7 +62,8 @@ void MesureSonar(){
         StateDirection = 0;
       }
     }
-    else{
+    else
+    {
       StateSignalSonore = 0;
     }
   }
@@ -93,9 +109,21 @@ void MesureSuiveur()
     shouldTurnLeft = 0;
   }
 
+  if (shouldTurnLeft > 4 && StateQuilleTombee == 7)
+  {
+    MOTOR_SetSpeed(1, 0);
+    StateDirection = -1;
+    LineFollowerLeftDone = true;
+  }
 
-  if ((shouldTurnLeft > 4 || shouldTurnRight > 4) && StateQuilleTombee == 7)
-    StateQuilleTombee = 5;
+  if (shouldTurnRight > 4 && StateQuilleTombee == 7)
+  {
+    delay(50);
+    MOTOR_SetSpeed(0, 0);
+    StateDirection = -1;
+    LineFollowerRightDone = true;
+  }
+
   else if (shouldTurnRight > 4 && StateQuilleTombee == 2)
     StateQuilleTombee = 3;
   else if (shouldTurnLeft > 4 && StateQuilleTombee == 2)
@@ -258,8 +286,6 @@ void TimerUpdate()
   delay(5);
   Timer += 5;
 }
-
-
 
 /** Function to accelerate exponentially to a certain distance
 
@@ -571,4 +597,17 @@ void MOVEMENTS_Stop()
 {
   MOTOR_SetSpeed(0, 0);
   MOTOR_SetSpeed(1, 0);
+}
+
+bool isLineFollowingDone()
+{
+  return LineFollowerRightDone && LineFollowerLeftDone;
+}
+
+uint8_t GetCouleur()
+{
+  struct RGB Couleurs;
+  uint8_t Lecture = LectureCouleur(&Couleurs);
+  Serial.print(Lecture);
+  return Lecture;
 }
