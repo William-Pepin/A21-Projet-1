@@ -2,6 +2,11 @@
 #include <math.h>
 #include "CapteurCouleur.h"
 
+const int redLED = 39;
+const int yellowLED = 41;
+const int greenLED = 43;
+const int blueLED = 45;
+
 int StateSignalSonore = 0;
 int StateQuilleTombee = 0;
 int StateCouleur = 0; //noir=0, blanc=1, rouge=2, etc.
@@ -25,6 +30,14 @@ void setup()
   SERVO_Enable(0);
   SERVO_SetAngle(0, 115);
   delay(100);
+  pinMode(yellowLED, OUTPUT);
+  digitalWrite(yellowLED, LOW);
+  pinMode(blueLED, OUTPUT);
+  digitalWrite(blueLED, LOW);
+  pinMode(redLED, OUTPUT);
+  digitalWrite(redLED, LOW);
+  pinMode(greenLED, OUTPUT);
+  digitalWrite(greenLED, LOW);
 }
 
 void loop()
@@ -82,6 +95,7 @@ void CouleurSequence()
   if (couleur == BLUE)
   {
     // Bleu
+    digitalWrite(blueLED, HIGH);
     MOVEMENTS_Turn(0, 90, 0.4);
     MOVEMENTS_Forward(16, 0.4);
     MOVEMENTS_Turn(1, 90, 0.4);
@@ -91,11 +105,13 @@ void CouleurSequence()
   else if (couleur == RED)
   {
     // Rouge
+    digitalWrite(redLED, HIGH);
     MOVEMENTS_Forward(90, 0.8);
     CAGE_Open();
   }
   else
   {
+    digitalWrite(yellowLED, HIGH);
     // Jaune
     MOVEMENTS_Turn(1, 90, 0.4);
     MOVEMENTS_Forward(20, 0.4);
@@ -103,6 +119,9 @@ void CouleurSequence()
     MOVEMENTS_Forward(90, 0.8);
     CAGE_Open();
   }
+  digitalWrite(yellowLED, LOW);
+  digitalWrite(blueLED, LOW);
+  digitalWrite(redLED, LOW);
   MOTOR_SetSpeed(0, -.4);
   MOTOR_SetSpeed(1, -.4);
   delay(1000);
@@ -129,9 +148,16 @@ void MesureSonar()
   {
     if (StateSignalSonore > 10)
     {
+      digitalWrite(blueLED, HIGH);
+      digitalWrite(redLED, HIGH);
+      digitalWrite(yellowLED, HIGH);
       float Distance = SONAR_GetRange(0);
       if (Distance < 35)
       {
+        digitalWrite(blueLED, LOW);
+        digitalWrite(redLED, LOW);
+        digitalWrite(yellowLED, LOW);
+        digitalWrite(greenLED, HIGH);
         delay(200);
         MOTOR_SetSpeed(0, 0);
         MOTOR_SetSpeed(1, 0);
@@ -141,6 +167,7 @@ void MesureSonar()
         MOVEMENTS_Forward(Distance - 5, 0.7);
         MOTOR_SetSpeed(0, -0.15);
         MOTOR_SetSpeed(1, 0.15);
+        digitalWrite(greenLED, LOW);
         StateSignalSonore = 0;
         StateQuilleTombee = 1;
         StateDirection = 0;
