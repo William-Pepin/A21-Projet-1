@@ -51,8 +51,6 @@ void loop()
     Serial.println(StateQuilleTombee);
   }
   CouleurSequence();
-  delay(1000);
-  SERVO_Disable(0);
   StateQuilleTombee = 0;
   LineFollowerLeftDone = false;
   LineFollowerRightDone = false;
@@ -89,7 +87,7 @@ void CouleurSequence()
   Serial.println(couleur);
 
   CAGE_Open();
-  MOVEMENTS_Forward(10.8, 0.4);
+  MOVEMENTS_Forward(9.8, 0.4);
   CAGE_Close();
 
   if (couleur == BLUE)
@@ -101,6 +99,19 @@ void CouleurSequence()
     MOVEMENTS_Turn(1, 90, 0.4);
     MOVEMENTS_Forward(90, 0.8);
     CAGE_Open();
+    delay(1000);
+    MOTOR_SetSpeed(0, -.4);
+    MOTOR_SetSpeed(1, -.4);
+    delay(1000);
+    MOTOR_SetSpeed(0, 0);
+    MOTOR_SetSpeed(1, 0);
+    CAGE_Close();
+    digitalWrite(blueLED, LOW);
+    MOVEMENTS_Turn(1, 180, 0.4);
+    MOVEMENTS_Forward(100, .8);
+    MOVEMENTS_Turn(1, 160, 0.4);
+    MOTOR_SetSpeed(0, -.3);
+    MOTOR_SetSpeed(1, -.2);
   }
   else if (couleur == RED)
   {
@@ -108,28 +119,43 @@ void CouleurSequence()
     digitalWrite(redLED, HIGH);
     MOVEMENTS_Forward(90, 0.8);
     CAGE_Open();
+    delay(1000);
+    MOTOR_SetSpeed(0, -.4);
+    MOTOR_SetSpeed(1, -.4);
+    delay(1000);
+    MOTOR_SetSpeed(0, 0);
+    MOTOR_SetSpeed(1, 0);
+    CAGE_Close();
+    digitalWrite(redLED, LOW);
+    MOVEMENTS_Turn(1, 180, 0.4);
+    MOVEMENTS_Forward(123, .8);
+    MOVEMENTS_Turn(1, 25, 0.3);
+    MOTOR_SetSpeed(0, -.2);
+    MOTOR_SetSpeed(1, -.3);
   }
   else
   {
     digitalWrite(yellowLED, HIGH);
     // Jaune
     MOVEMENTS_Turn(1, 90, 0.4);
-    MOVEMENTS_Forward(20, 0.4);
+    MOVEMENTS_Forward(19, 0.4);
     MOVEMENTS_Turn(0, 90, 0.4);
     MOVEMENTS_Forward(90, 0.8);
     CAGE_Open();
+    delay(1000);
+    MOTOR_SetSpeed(0, -.4);
+    MOTOR_SetSpeed(1, -.4);
+    delay(1000);
+    MOTOR_SetSpeed(0, 0);
+    MOTOR_SetSpeed(1, 0);
+    CAGE_Close();
+    digitalWrite(yellowLED, LOW);
+    MOVEMENTS_Turn(1, 180, 0.4);
+    MOVEMENTS_Forward(120, .8);
+    MOVEMENTS_Turn(1, 90, 0.4);
+    MOTOR_SetSpeed(0, .2);
+    MOTOR_SetSpeed(1, -.2);
   }
-  digitalWrite(yellowLED, LOW);
-  digitalWrite(blueLED, LOW);
-  digitalWrite(redLED, LOW);
-  MOTOR_SetSpeed(0, -.4);
-  MOTOR_SetSpeed(1, -.4);
-  delay(1000);
-  MOTOR_SetSpeed(0, 0);
-  MOTOR_SetSpeed(1, 0);
-  CAGE_Close();
-  MOVEMENTS_Turn(1, 180, 0.4);
-  MOVEMENTS_Forward(120, .8);
 }
 
 void CAGE_Open()
@@ -161,10 +187,10 @@ void MesureSonar()
         delay(200);
         MOTOR_SetSpeed(0, 0);
         MOTOR_SetSpeed(1, 0);
-        MOVEMENTS_Turn(0, 100, 0.5);
-        MOVEMENTS_Forward(Distance - 5, 0.7);
-        MOVEMENTS_Turn(1, 180, 0.5);
-        MOVEMENTS_Forward(Distance - 5, 0.7);
+        MOVEMENTS_Turn(0, 100, 0.4);
+        MOVEMENTS_Forward(Distance - 5, 0.5);
+        MOVEMENTS_Turn(1, 180, 0.4);
+        MOVEMENTS_Forward(Distance - 5, 0.5);
         MOTOR_SetSpeed(0, -0.15);
         MOTOR_SetSpeed(1, 0.15);
         digitalWrite(greenLED, LOW);
@@ -229,7 +255,7 @@ void MesureSuiveur()
 
   if (shouldTurnRight > 4 && StateQuilleTombee == 7)
   {
-    delay(35);
+    delay(60);
     MOTOR_SetSpeed(0, 0);
     StateDirection = -1;
     LineFollowerRightDone = true;
