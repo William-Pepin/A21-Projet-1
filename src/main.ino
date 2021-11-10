@@ -153,14 +153,14 @@ void CouleurSequence()
     MOVEMENTS_Turn(1, 180, 0.4);
     MOVEMENTS_Forward(120, .8);
     MOVEMENTS_Turn(1, 90, 0.4);
-    MOTOR_SetSpeed(0, .2);
+    MOTOR_SetSpeed(0, .25);
     MOTOR_SetSpeed(1, -.2);
   }
 }
 
 void CAGE_Open()
 {
-  SERVO_SetAngle(0, 15);
+  SERVO_SetAngle(0, 30);
 }
 
 void CAGE_Close()
@@ -187,7 +187,7 @@ void MesureSonar()
         delay(200);
         MOTOR_SetSpeed(0, 0);
         MOTOR_SetSpeed(1, 0);
-        MOVEMENTS_Turn(0, 100, 0.4);
+        MOVEMENTS_Turn(0, 110, 0.4);
         MOVEMENTS_Forward(Distance - 5, 0.5);
         MOVEMENTS_Turn(1, 180, 0.4);
         MOVEMENTS_Forward(Distance - 5, 0.5);
@@ -239,7 +239,7 @@ void MesureSuiveur()
   {
     shouldTurnRight = 0;
   }
-  if (mesureGauche < 650)
+  if (mesureGauche < 670)
     shouldTurnLeft++;
   else
   {
@@ -255,7 +255,7 @@ void MesureSuiveur()
 
   if (shouldTurnRight > 4 && StateQuilleTombee == 7)
   {
-    delay(60);
+    delay(65);
     MOTOR_SetSpeed(0, 0);
     StateDirection = -1;
     LineFollowerRightDone = true;
