@@ -1,6 +1,7 @@
 #include <LibRobus.h>
 #include <math.h>
 #include "CapteurCouleur.h"
+#include <CapteurSonar.h>
 
 const int redLED = 39;
 const int yellowLED = 41;
@@ -42,18 +43,19 @@ void setup()
 
 void loop()
 {
-  while (!(LineFollowerLeftDone && LineFollowerRightDone))
-  {
-    AjustementDirection();
-    MesureSuiveur();
-    MesureSonar();
-    TimerUpdate();
-    Serial.println(StateQuilleTombee);
-  }
-  CouleurSequence();
-  StateQuilleTombee = 0;
-  LineFollowerLeftDone = false;
-  LineFollowerRightDone = false;
+  detectObstacle();
+  //while (!(LineFollowerLeftDone && LineFollowerRightDone))
+  //{
+  //  AjustementDirection();
+  //  MesureSuiveur();
+  //  MesureSonar();
+  //  TimerUpdate();
+  //  Serial.println(StateQuilleTombee);
+  //}
+  //CouleurSequence();
+  //StateQuilleTombee = 0;
+  //LineFollowerLeftDone = false;
+  //LineFollowerRightDone = false;
 }
 void TesterValeur()
 {
@@ -747,4 +749,20 @@ uint8_t GetCouleur()
   uint8_t Lecture = LectureCouleur(&Couleurs);
   Serial.print(Lecture);
   return Lecture;
+}
+
+void detectObstacle()
+{
+  if (SONAR_IsObstacleDetected())
+  {
+    MOTOR_SetSpeed(0, 0);
+    MOTOR_SetSpeed(1, 0);
+    digitalWrite(greenLED, HIGH);
+  }
+  else
+  {
+    MOTOR_SetSpeed(0, 0.2);
+    MOTOR_SetSpeed(1, 0.2);
+    digitalWrite(greenLED, LOW);
+  }
 }
