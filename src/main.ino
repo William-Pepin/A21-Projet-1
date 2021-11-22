@@ -7,7 +7,7 @@ const int yellowLED = 41;
 const int greenLED = 43;
 const int blueLED = 45;
 const int greenButton = 47;
-const int RedButton = 49;
+const int redButton = 49;
 
 int StateSignalSonore = 0;
 int StateQuilleTombee = 0;
@@ -28,6 +28,7 @@ bool isInChamber = false;
 int chamberNumber = 0;
 int timerRFID = 0;
 uint16_t audioTrack = 0;
+int RFID = -1;
 
 struct Drugs
 {
@@ -45,6 +46,11 @@ struct Patient
   struct Drugs daily_drugs;
   bool daily_drugs_confirmation;
 };
+struct Patient Tremblay;
+struct Patient Gagnon;
+struct Patient Cote;
+struct Patient Roy;
+struct Patient currentPatient;
 
 void setup()
 {
@@ -63,12 +69,12 @@ void setup()
   digitalWrite(greenLED, LOW);
   data_initialisation();
   pinMode(greenButton, INPUT_PULLUP);
-  pinMode(RedButton, INPUT_PULLUP);
+  pinMode(redButton, INPUT_PULLUP);
 }
 
 void loop()
 {
-  if (isInChamber == true;)
+  if (isInChamber == true)
   {
     AUDIO_PlayBlocking(0);
 
@@ -79,6 +85,7 @@ void loop()
       /*
       scan RFID Lire identifie Patient
       */
+      currentPatient = Tremblay; // todo combiner le rfid
       timerRFID += 50;
     }
 
@@ -92,7 +99,7 @@ void loop()
     if (chamberNumber == 0)
     {
 
-      if (chamberNumber == Patient.room_number)
+      if (chamberNumber == currentPatient.room_number)
       {
         AUDIO_PlayBlocking(1); // Bonjour Mr Tremblay
       }
@@ -103,7 +110,7 @@ void loop()
     }
     else if (chamberNumber == 1)
     {
-      if (chamberNumber == Patient.room_number)
+      if (chamberNumber == currentPatient.room_number)
       {
         AUDIO_PlayBlocking(2); // Bonjour Mr Gagnon
       }
@@ -114,7 +121,7 @@ void loop()
     }
     else if (chamberNumber == 2)
     {
-      if (chamberNumber == Patient.room_number)
+      if (chamberNumber == currentPatient.room_number)
       {
         AUDIO_PlayBlocking(3); // Bonjour Mr Roy
       }
@@ -125,7 +132,7 @@ void loop()
     }
     else if (chamberNumber == 3)
     {
-      if (chamberNumber == Patient.room_number)
+      if (chamberNumber == currentPatient.room_number)
       {
         AUDIO_PlayBlocking(4); // Bonjour Mr Côté
       }
@@ -134,53 +141,51 @@ void loop()
         //allumé LED
       }
     }
-  }
 
-  AUDIO_PlayBlocking(5); //Avez vous besoin d'assitance médicale immédiate
-  /*
-      Vérifie sur quel bouton le patient à appuyer
-    */
-  AUDIO_PlayBlocking(6); //Avez-vous eu votre dose de médicament quotidienne
-  /*
-      Vérifie sur quel bouton le patient à appuyer
-    */
-  if (Patient.daily_drugs_confirmation == false)
-  {
-    AUDIO_PlayBlocking(7); //Voici vos pillules ?
+    AUDIO_PlayBlocking(5); //Avez vous besoin d'assitance médicale immédiate
     /*
+      Vérifie sur quel bouton le patient à appuyer
+    */
+    AUDIO_PlayBlocking(6); //Avez-vous eu votre dose de médicament quotidienne
+    /*
+      Vérifie sur quel bouton le patient à appuyer
+    */
+    if (currentPatient.daily_drugs_confirmation == false)
+    {
+      AUDIO_PlayBlocking(7); //Voici vos pillules ?
+      /*
         Distribution de pillule
      */
-  }
-  else
-  {
-    //Allumé LED
-  }
+    }
+    else
+    {
+      //Allumé LED
+    }
 
-  AUDIO_PlayBlocking(8); //Aimeriez-vous voir une infirmère pour tout autre raison non-urgente
-                         /*
+    AUDIO_PlayBlocking(8); //Aimeriez-vous voir une infirmère pour tout autre raison non-urgente
+                           /*
       Vérifie sur quel bouton le patient à appuyer
     */
 
-  AUDIO_PlayBlocking(8) //Merci de votre compréhension, bye bye
+    AUDIO_PlayBlocking(8); //Merci de votre compréhension, bye bye
 
-      isInChamber == false;
-  chamberNumber += 1;
+    isInChamber = false;
+    chamberNumber += 1;
+  }
+
+  // while (!(LineFollowerLeftDone && LineFollowerRightDone))
+  // {
+  //   AjustementDirection();
+  //   MesureSuiveur();
+  //   MesureSonar();
+  //   TimerUpdate();
+  //   Serial.println(StateQuilleTombee);
+  // }
+  // CouleurSequence();
+  // StateQuilleTombee = 0;
+  // LineFollowerLeftDone = false;
+  // LineFollowerRightDone = false;
 }
-
-// while (!(LineFollowerLeftDone && LineFollowerRightDone))
-// {
-//   AjustementDirection();
-//   MesureSuiveur();
-//   MesureSonar();
-//   TimerUpdate();
-//   Serial.println(StateQuilleTombee);
-// }
-// CouleurSequence();
-// StateQuilleTombee = 0;
-// LineFollowerLeftDone = false;
-// LineFollowerRightDone = false;
-}
-
 void TesterValeur()
 {
   int mesureGauche = analogRead(A7);
@@ -877,7 +882,6 @@ uint8_t GetCouleur()
 
 void data_initialisation()
 {
-  struct Patient Tremblay;
   Tremblay.last_name[0] = 'T';
   Tremblay.last_name[1] = 'r';
   Tremblay.last_name[2] = 'e';
@@ -905,7 +909,6 @@ void data_initialisation()
 
   Tremblay.daily_drugs_confirmation = false;
 
-  struct Patient Gagnon;
   Gagnon.last_name[0] = 'G';
   Gagnon.last_name[1] = 'a';
   Gagnon.last_name[2] = 'g';
@@ -933,7 +936,6 @@ void data_initialisation()
 
   Gagnon.daily_drugs_confirmation = false;
 
-  struct Patient Roy;
   Roy.last_name[0] = 'R';
   Roy.last_name[1] = 'o';
   Roy.last_name[2] = 'y';
@@ -958,7 +960,6 @@ void data_initialisation()
 
   Roy.daily_drugs_confirmation = false;
 
-  struct Patient Cote;
   Cote.last_name[0] = 'C';
   Cote.last_name[1] = 'o';
   Cote.last_name[2] = 't';
