@@ -185,3 +185,11 @@ uint16_t LectureCouleur(struct RGB *ADR_Couleurs)
     // Serial.print("\n");
     return (RIEN);
 }
+
+uint8_t GetCouleur()
+{
+    struct RGB Couleurs;
+    uint8_t Lecture = LectureCouleur(&Couleurs);
+    Serial.print(Lecture);
+    return Lecture;
+}
