@@ -11,11 +11,11 @@
 #define COULEUR_CHAMBRE (0x03) // TODO Modifier pour la bonne couleur
 #define COULEUR_POSTE (0x04)   // TODO Modifier pour la bonne couleur
 
-const int redLED = 39;
+const int redButtonLED = 39;
 const int yellowLED = 41;
-const int greenLED = 43;
-const int blueLED = 45;
-const int greenButton = 47;
+const int blueLED = 43;
+const int greenButtonLED = 47;
+const int greenButton = 45;
 const int redButton = 49;
 
 uint8_t couleur = 0;
@@ -43,14 +43,22 @@ void setup()
   SERVO_Enable(0);
   SERVO_SetAngle(0, 115);
   delay(100);
+
   pinMode(yellowLED, OUTPUT);
   digitalWrite(yellowLED, LOW);
+
   pinMode(blueLED, OUTPUT);
   digitalWrite(blueLED, LOW);
-  pinMode(redLED, OUTPUT);
-  digitalWrite(redLED, LOW);
-  pinMode(greenLED, OUTPUT);
-  digitalWrite(greenLED, LOW);
+
+  pinMode(yellowLED, OUTPUT);
+  digitalWrite(yellowLED, LOW);
+
+  pinMode(greenButtonLED, OUTPUT);
+  digitalWrite(greenButtonLED, LOW);
+
+  pinMode(redButtonLED, OUTPUT);
+  digitalWrite(redButtonLED, LOW);
+
   data_initialisation();
   pinMode(greenButton, INPUT_PULLUP);
   pinMode(redButton, INPUT_PULLUP);
