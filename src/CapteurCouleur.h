@@ -15,6 +15,7 @@
 #define BLUE   (0x03)
 #define YELLOW (0x04)
 #define RIEN   (0x05)
+#define PLANCHER (0x06)
 
 struct RGB
 {
@@ -153,17 +154,21 @@ uint16_t LectureCouleur(struct RGB *ADR_Couleurs)
   ColorCapteurRawData(ADR_Couleurs);
   ColorCapteurKelvin(ADR_Couleurs);
   // delay(1000);
-  // Serial.print(Couleurs.Red,DEC);
-  // Serial.print("  ");
-  // Serial.print(Couleurs.Green,DEC);
-  // Serial.print("  ");
-  // Serial.print(Couleurs.Blue,DEC);
-  // Serial.print("  ");
-  // Serial.print(Couleurs.Clear,DEC);
-  // Serial.print("\n");
-  // Serial.print(Couleurs.Kelvin,DEC);
-  // Serial.print("\n");
-  if((ADR_Couleurs->Kelvin > 11000) & (abs(ADR_Couleurs->Red - ADR_Couleurs->Blue) > 500))
+  Serial.print(ADR_Couleurs->Red,DEC);
+  Serial.print("  ");
+  Serial.print(ADR_Couleurs->Green,DEC);
+  Serial.print("  ");
+  Serial.print(ADR_Couleurs->Blue,DEC);
+  Serial.print("  ");
+  Serial.print(ADR_Couleurs->Clear,DEC);
+  Serial.print("\n");
+  Serial.print(ADR_Couleurs->Kelvin,DEC);
+  Serial.print("\n");
+  if((ADR_Couleurs->Red < 1800) & (ADR_Couleurs->Green < 1800) & (ADR_Couleurs->Blue < 1800))
+  {
+    return(PLANCHER);
+  }
+  else if((ADR_Couleurs->Kelvin > 11000) & (abs(ADR_Couleurs->Red - ADR_Couleurs->Blue) > 500))
   {
     // Serial.print("Bleu");
     return(BLUE);
@@ -183,6 +188,7 @@ uint16_t LectureCouleur(struct RGB *ADR_Couleurs)
     // Serial.print("Vert");
     return(GREEN);
   }
+  
   // Serial.print(abs(Couleurs.Red - Couleurs.Blue),DEC);                       // Affichage de la valeur absolue de rouge - bleu
   // Serial.print("\n");
   return(RIEN);

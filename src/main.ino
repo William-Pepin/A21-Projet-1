@@ -32,5 +32,9 @@ void loop()
   {
     Serial.print("YELLOW\n");
   }
+  if(Lecture == PLANCHER)
+  {
+    Serial.print("PLANCHER\n");
+  }
   delay(1000);
 }
