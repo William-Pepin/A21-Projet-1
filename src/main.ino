@@ -6,7 +6,7 @@ const int redLED = 39;
 const int yellowLED = 41;
 const int greenLED = 43;
 const int blueLED = 45;
-const int greenButton = 47;
+const int greenButton = 45;
 const int redButton = 49;
 
 int StateSignalSonore = 0;
@@ -24,7 +24,7 @@ const double ROBOT_CIRCONFERENCE_LEFT = 2 * PI * 3.85;
 const double MIN_SPEED = 0.07;
 uint8_t couleur = 0;
 
-bool isInChamber = false;
+bool isInChamber = true;
 int chamberNumber = 0;
 int timerRFID = 0;
 uint16_t audioTrack = 0;
@@ -82,15 +82,22 @@ void loop()
   {
     //AUDIO_PlayBlocking(0); // Allo je suis bla bla bla avez besoin d'aide
     //AUDIO_PlayBlocking(9); // si vous répondez pas dans 10 sec infirmière
-    if (buttonResponse() == 2) // à changer parce qu'au sinon le client peut pas cliqué tant que pas fini parler
+    Serial.println("Fini dire 10 sec");
+    buttonBuffer = buttonResponse();
+    if (buttonBuffer == 2 || buttonBuffer == -1) // à changer parce qu'au sinon le client peut pas cliqué tant que pas fini parler
         {
+          Serial.println("Besoin d'urgence");
           //Allumé LED caller infirmière
         }
 
+        Serial.println("pas prob");
+        
+    delay(3000);
+      
     //AUDIO_PlayBlocking(10); // Veuillez scanner votre carte RFID
-
+    Serial.println("scanner RFID");
     //on met un délais pour savoir si le client SCAN sinon on alerte les infirmière
-    while (RFID == -1 && timerRFID <= 10000)
+    while (RFID == -1 && timerRFID <= 100)
     {
       delay(50);
       /*
@@ -113,6 +120,8 @@ void loop()
       if (chamberNumber == currentPatient.room_number)
       {
         //AUDIO_PlayBlocking(1); // Bonjour Mr Tremblay
+        Serial.println("1 audio temblay");
+        delay(3000);
       }
       else
       {
@@ -156,10 +165,14 @@ void loop()
     //AUDIO_PlayBlocking(1); // Médication quotidienne ?
     if (buttonResponse() == 2 && currentPatient.daily_drugs_confirmation == false)
         {
+          Serial.println("3 audio distri pillule");
+          delay(3000);
           //distribue pillule
           //AUDIO_PlayBlocking(2); //Voici vos pillules ?
         }else
         {
+          Serial.println("3 audio pas distri pillule");
+          delay(3000);
           //Allumé LED (infirmière)
         }
 
@@ -167,11 +180,13 @@ void loop()
     buttonBuffer = buttonResponse();
     if (buttonBuffer == 1 || buttonBuffer == -1)
         {
+          Serial.println("4 audio aide medi pas importante");
+          delay(3000);
           //Allumé LED (infirmière)
         }
 
     //AUDIO_PlayBlocking(8); //Merci de votre compréhension, bye bye
-
+    Serial.println("finito pepito");
     isInChamber = false;
     chamberNumber += 1;
     buttonBuffer = -2; 
@@ -903,7 +918,7 @@ void data_initialisation()
   Tremblay.first_name[3] = 'm';
   Tremblay.first_name[4] = '\0';
 
-  Tremblay.room_number = 1;
+  Tremblay.room_number = 0;
 
   Tremblay.rfid_code[0] = '1';
   Tremblay.rfid_code[1] = '\0';
@@ -930,7 +945,7 @@ void data_initialisation()
   Gagnon.first_name[4] = 's';
   Gagnon.first_name[5] = '\0';
 
-  Gagnon.room_number = 2;
+  Gagnon.room_number = 1;
 
   Gagnon.rfid_code[0] = '2';
   Gagnon.rfid_code[1] = '\0';
@@ -954,7 +969,7 @@ void data_initialisation()
   Roy.first_name[4] = 'a';
   Roy.first_name[5] = '\0';
 
-  Roy.room_number = 3;
+  Roy.room_number = 2;
 
   Roy.rfid_code[0] = '3';
   Roy.rfid_code[1] = '\0';
@@ -978,7 +993,7 @@ void data_initialisation()
   Cote.first_name[3] = 'e';
   Cote.first_name[4] = '\0';
 
-  Cote.room_number = 4;
+  Cote.room_number = 3;
 
   Cote.rfid_code[0] = '4';
   Cote.rfid_code[1] = '\0';
@@ -999,10 +1014,8 @@ int witchButton()
   }
   else if (digitalRead(redButton) == LOW)
   {
-
     return 2;
   }
-
   return -1;
 }
 
