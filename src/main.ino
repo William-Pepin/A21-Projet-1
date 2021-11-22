@@ -1,7 +1,6 @@
 #include <LibRobus.h>
 #include <math.h>
-#include <Wire.h>
-#include "CapteurCouleur.h"
+#include "ServoMoteur.h"
 
 
 
@@ -9,32 +8,16 @@ void setup()
 {
   BoardInit();
   delay(100);
-  ColorCapteurBegin();
+  ServoInit();
 }
 
 void loop()
 {
-  struct RGB Couleurs;
-  uint8_t Lecture = LectureCouleur(&Couleurs);
-  if(Lecture == RED)
-  {
-    Serial.print("RED\n");
-  }
-  if(Lecture == GREEN)
-  {
-    Serial.print("GREEN\n");
-  }
-  if(Lecture == BLUE)
-  {
-    Serial.print("BLUE\n");
-  }
-  if(Lecture == YELLOW)
-  {
-    Serial.print("YELLOW\n");
-  }
-  if(Lecture == PLANCHER)
-  {
-    Serial.print("PLANCHER\n");
-  }
-  delay(1000);
+  ServoDropPills(BLACK_P, 2);
+  ServoDropPills(BLUE_P, 3);
+  ServoDropPills(RED_P, 1);
 }
+
+
+
+
