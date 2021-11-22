@@ -29,12 +29,16 @@ int chamberNumber = 0;
 int timerRFID = 0;
 uint16_t audioTrack = 0;
 int RFID = -1;
+int buttonBuffer = -2;
+
+
 
 struct Drugs
 {
   short red;
-  short bleu;
-  short green;
+  short blue;
+  short black;
+  short yellow;
 };
 
 struct Patient
@@ -76,24 +80,31 @@ void loop()
 {
   if (isInChamber == true)
   {
-    AUDIO_PlayBlocking(0);
+    //AUDIO_PlayBlocking(0); // Allo je suis bla bla bla avez besoin d'aide
+    //AUDIO_PlayBlocking(9); // si vous répondez pas dans 10 sec infirmière
+    if (buttonResponse() == 2) // à changer parce qu'au sinon le client peut pas cliqué tant que pas fini parler
+        {
+          //Allumé LED caller infirmière
+        }
 
-    //on met un délais pour savoir si le client appuis dessus sinon on alerte les infirmière
-    while (RFID != -1 || timerRFID == 15000)
+    //AUDIO_PlayBlocking(10); // Veuillez scanner votre carte RFID
+
+    //on met un délais pour savoir si le client SCAN sinon on alerte les infirmière
+    while (RFID == -1 && timerRFID <= 10000)
     {
       delay(50);
       /*
-      scan RFID Lire identifie Patient
+        scan RFID Lire identifie Patient
       */
       currentPatient = Tremblay; // todo combiner le rfid
       timerRFID += 50;
     }
 
-    if (timerRFID < 15000)
+    if (timerRFID >= 10000)
     {
-      //Appeler infirmière (allumer LED)
-      timerRFID == 0;
+      //Allumer LED (appeller infirmière)
     }
+    timerRFID = 0;
 
     //chamberNumber est la chambre dans laquelle le robot est
     if (chamberNumber == 0)
@@ -101,7 +112,7 @@ void loop()
 
       if (chamberNumber == currentPatient.room_number)
       {
-        AUDIO_PlayBlocking(1); // Bonjour Mr Tremblay
+        //AUDIO_PlayBlocking(1); // Bonjour Mr Tremblay
       }
       else
       {
@@ -112,7 +123,7 @@ void loop()
     {
       if (chamberNumber == currentPatient.room_number)
       {
-        AUDIO_PlayBlocking(2); // Bonjour Mr Gagnon
+        //AUDIO_PlayBlocking(2); // Bonjour Mr Gagnon
       }
       else
       {
@@ -123,7 +134,7 @@ void loop()
     {
       if (chamberNumber == currentPatient.room_number)
       {
-        AUDIO_PlayBlocking(3); // Bonjour Mr Roy
+        //AUDIO_PlayBlocking(3); // Bonjour Mr Roy
       }
       else
       {
@@ -134,7 +145,7 @@ void loop()
     {
       if (chamberNumber == currentPatient.room_number)
       {
-        AUDIO_PlayBlocking(4); // Bonjour Mr Côté
+       // AUDIO_PlayBlocking(4); // Bonjour Mr Côté
       }
       else
       {
@@ -142,35 +153,28 @@ void loop()
       }
     }
 
-    AUDIO_PlayBlocking(5); //Avez vous besoin d'assitance médicale immédiate
-    /*
-      Vérifie sur quel bouton le patient à appuyer
-    */
-    AUDIO_PlayBlocking(6); //Avez-vous eu votre dose de médicament quotidienne
-    /*
-      Vérifie sur quel bouton le patient à appuyer
-    */
-    if (currentPatient.daily_drugs_confirmation == false)
-    {
-      AUDIO_PlayBlocking(7); //Voici vos pillules ?
-      /*
-        Distribution de pillule
-     */
-    }
-    else
-    {
-      //Allumé LED
-    }
+    //AUDIO_PlayBlocking(1); // Médication quotidienne ?
+    if (buttonResponse() == 2 && currentPatient.daily_drugs_confirmation == false)
+        {
+          //distribue pillule
+          //AUDIO_PlayBlocking(2); //Voici vos pillules ?
+        }else
+        {
+          //Allumé LED (infirmière)
+        }
 
-    AUDIO_PlayBlocking(8); //Aimeriez-vous voir une infirmère pour tout autre raison non-urgente
-                           /*
-      Vérifie sur quel bouton le patient à appuyer
-    */
+    //AUDIO_PlayBlocking(8); //Aimeriez-vous voir une infirmère pour tout autre raison non-urgente
+    buttonBuffer = buttonResponse();
+    if (buttonBuffer == 1 || buttonBuffer == -1)
+        {
+          //Allumé LED (infirmière)
+        }
 
-    AUDIO_PlayBlocking(8); //Merci de votre compréhension, bye bye
+    //AUDIO_PlayBlocking(8); //Merci de votre compréhension, bye bye
 
     isInChamber = false;
     chamberNumber += 1;
+    buttonBuffer = -2; 
   }
 
   // while (!(LineFollowerLeftDone && LineFollowerRightDone))
@@ -186,6 +190,7 @@ void loop()
   // LineFollowerLeftDone = false;
   // LineFollowerRightDone = false;
 }
+
 void TesterValeur()
 {
   int mesureGauche = analogRead(A7);
@@ -904,8 +909,8 @@ void data_initialisation()
   Tremblay.rfid_code[1] = '\0';
 
   Tremblay.daily_drugs.red = 1;
-  Tremblay.daily_drugs.bleu = 2;
-  Tremblay.daily_drugs.green = 3;
+  Tremblay.daily_drugs.blue = 2;
+  Tremblay.daily_drugs.black = 3;
 
   Tremblay.daily_drugs_confirmation = false;
 
@@ -931,8 +936,8 @@ void data_initialisation()
   Gagnon.rfid_code[1] = '\0';
 
   Gagnon.daily_drugs.red = 2;
-  Gagnon.daily_drugs.bleu = 2;
-  Gagnon.daily_drugs.green = 2;
+  Gagnon.daily_drugs.blue = 2;
+  Gagnon.daily_drugs.black = 2;
 
   Gagnon.daily_drugs_confirmation = false;
 
@@ -955,8 +960,8 @@ void data_initialisation()
   Roy.rfid_code[1] = '\0';
 
   Roy.daily_drugs.red = 3;
-  Roy.daily_drugs.bleu = 2;
-  Roy.daily_drugs.green = 1;
+  Roy.daily_drugs.blue = 2;
+  Roy.daily_drugs.black = 1;
 
   Roy.daily_drugs_confirmation = false;
 
@@ -979,22 +984,37 @@ void data_initialisation()
   Cote.rfid_code[1] = '\0';
 
   Cote.daily_drugs.red = 3;
-  Cote.daily_drugs.bleu = 3;
-  Cote.daily_drugs.green = 4;
+  Cote.daily_drugs.blue = 3;
+  Cote.daily_drugs.yellow = 4;
 
   Cote.daily_drugs_confirmation = false;
 }
 
-int gestionBouton()
+int witchButton()
 {
+
   if (digitalRead(greenButton) == LOW)
   {
     return 1;
   }
   else if (digitalRead(redButton) == LOW)
   {
-    return 0;
+
+    return 2;
   }
 
   return -1;
+}
+
+int buttonResponse(){
+  int buttonState = -1;
+  int timerButton = 0;
+   while (buttonState == -1 && timerButton <= 10000)
+    {
+      delay(50);
+      buttonState = witchButton();
+      timerButton += 50;
+    }
+
+    return buttonState;
 }
