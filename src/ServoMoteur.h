@@ -7,9 +7,9 @@
 #define YELLOW_P 4
 
 // testé et les positions sont bonnes
-#define DEG_FOR_0_0   0
-#define DEG_FOR_90_0  80
-#define DEG_FOR_180_0 160
+#define DEG_FOR_0_0   10
+#define DEG_FOR_90_0  88
+#define DEG_FOR_180_0 170
 
 // pas encore testé
 #define DEG_FOR_90_1  90

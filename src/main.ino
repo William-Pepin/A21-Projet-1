@@ -11,11 +11,11 @@ void setup()
   ServoInit();
 }
 
-void loop()
+void loop()                                          
 {
-  ServoDropPills(BLACK_P, 2);
-  ServoDropPills(BLUE_P, 3);
-  ServoDropPills(RED_P, 1);
+  ServoDropPills(BLACK_P,2);
+  ServoDropPills(BLUE_P, 2);
+
 }
 
 
