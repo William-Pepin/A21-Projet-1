@@ -55,6 +55,9 @@ uint8_t month = 1;
 uint8_t hour = 9;
 // End Clock
 
+//RFID
+char RFID_ID[50];
+
 void setup()
 {
     BoardInit();
@@ -87,6 +90,7 @@ void setup()
     DS3231_init(DS3231_CONTROL_INTCN);
     memset(recv, 0, BUFF_MAX);
     //End Clock
+    Serial1.begin(9600);
 }
 
 void setTime()
@@ -100,11 +104,50 @@ void setTime()
 
 void loop()
 {
-    Serial.println("Test");
+    CheckRFID(RFID_ID);
+    //mainSequence();
+}
+
+void timertest()
+{
     delay(5000);
     DS3231_get(&rtcTime);
     Serial.println(rtcTime.sec);
-    //mainSequence();
+}
+
+void CheckRFID(char RFID_ID[50])
+{
+
+    char crecu, i, incoming = 0;
+    while (1)
+    {
+        if (Serial1.available())
+        {
+            crecu = Serial1.read(); // lit le ID-12
+            switch (crecu)
+            {
+            case 0x02:
+                // START OF TRANSMIT
+                AX_BuzzerON();
+                i = 0;
+                incoming = 1;
+                break;
+            case 0x03:
+                // END OF TRANSMIT
+                AX_BuzzerOFF();
+                incoming = 0;
+                // Affiche le code recu sans valider le checksum
+                for (i = 0; i < 10; i++)
+                    Serial.print(RFID_ID[i]);
+                Serial.println("");
+                break;
+            default:
+                if (incoming)
+                    RFID_ID[i++] = crecu;
+                break;
+            }
+        }
+    }
 }
 
 void mainSequence()
