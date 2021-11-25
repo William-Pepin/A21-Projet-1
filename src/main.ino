@@ -104,14 +104,37 @@ void setTime()
 
 void loop()
 {
+    // POUR LE RFID
     CheckRFID(RFID_ID);
+
+    // POUR LE TIMER
+    //timertest();
+
+    // POUR LE SONAR
+    //sonarTest();
+
     //mainSequence();
+}
+
+void sonarTest()
+{
+    MOTOR_SetSpeed(1, -0.2);
+    MOTOR_SetSpeed(0, -0.2);
+    DetectObstacle();
 }
 
 void timertest()
 {
     delay(5000);
     DS3231_get(&rtcTime);
+    Serial.print(rtcTime.year);
+    Serial.print(" ");
+    Serial.print(rtcTime.mday);
+    Serial.print(" ");
+    Serial.print(rtcTime.hour);
+    Serial.print(" ");
+    Serial.print(rtcTime.min);
+    Serial.print(" ");
     Serial.println(rtcTime.sec);
 }
 
