@@ -1,16 +1,20 @@
 struct Drugs
 {
-    short red;
-    short bleu;
-    short green;
+    int red;
+    int green;
+    int blue;
+    int yellow;
 };
 
 struct Patient
 {
-    char first_name[50];
-    char last_name[50];
-    short room_number;
-    char rfid_code[50];
-    struct Drugs daily_drugs;
-    bool daily_drugs_confirmation;
+    char first_name[32];
+    char last_name[32];
+    int room_number;
+    char rfid_code[32];
+    struct Drugs morning;
+    struct Drugs noon;
+    struct Drugs souper;
+    struct Drugs night;
+    bool time_last_drugs_received;
 };
