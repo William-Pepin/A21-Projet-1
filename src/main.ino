@@ -1,11 +1,15 @@
 #include <LibRobus.h>
+#include <Wire.h>
+#include <ds3231.h>
+ 
+struct ts t; 
 
-uint16_t track = 0;
 
 void setup()
 {
   BoardInit();
-  AudioInit();
+  Serial.begin(9600);
+  Wire.begin();
 }
 
 void loop()
