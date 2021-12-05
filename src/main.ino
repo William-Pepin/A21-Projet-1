@@ -11,4 +11,5 @@ void setup()
 void loop()
 {
   AUDIO_PlayBlocking(track);
+  track++;
 }
