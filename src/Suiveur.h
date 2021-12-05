@@ -1,6 +1,6 @@
 #include <LibRobus.h>
 
-int StateDirection = 0;
+int StateStep = 0;
 int Timer = 0;
 
 void MesureSuiveur()

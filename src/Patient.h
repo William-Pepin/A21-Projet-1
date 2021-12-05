@@ -11,10 +11,9 @@ struct Patient
     char first_name[32];
     char last_name[32];
     int room_number;
-    char rfid_code[32];
+    char rfid_code[50];
     struct Drugs morning;
     struct Drugs noon;
     struct Drugs souper;
     struct Drugs night;
-    bool time_last_drugs_received;
 };
