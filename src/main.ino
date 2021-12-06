@@ -9,6 +9,7 @@
 #include "Patient.h"
 #include "capteurSonar.h"
 #include "../lib/ds3231/ds3231.h"
+#include "ServoMoteur.h"
 
 #define COULEUR_CHAMBRE (0x02) // TODO Modifier pour la bonne couleur
 #define COULEUR_POSTE (0x05)   // TODO Modifier pour la bonne couleur
@@ -30,12 +31,13 @@ const uint16_t a_Roy = 6;
 const uint16_t a_Cote = 7;
 const uint16_t a_Medication = 8;
 const uint16_t a_Indication = 9;
-const uint16_t a_Obstruction = 10;
+const uint16_t a_Demande = 10;
+const uint16_t a_Outroduction = 11;
 
 int StateStep = 0;
-//0: Cherche infirmière, 1: Ronde normale: Entre dans chambre, 2: Quiz,
+//0: Cherche infirmière, 1: Ronde normale: Entre dans chambre, 2: Quiz, 3: Retour infirmière
 int StepSuiveur = 0;
-//0: Suivi de ligne blanche, 1: Arrivée à une pièce, 2: Réentrée sur la ligne, 3: Obstruction
+//0: Suivi de ligne blanche, 1: Arrivée à une pièce, 2: Réentrée sur la ligne, 3: Obstruction, 4: Retour sur ligne, 5: skip chambre
 int Timer = 0;
 int StateDirection = 0;
 int shouldTurnLeft = 0;
@@ -45,6 +47,8 @@ int StateAvertissementOld = 0;
 int StateRoom = 0;
 struct Patient ListePatient[5];
 int PatientChoisi;
+//0: Infirmière, 1: Tremblay, 2: Gagnon, 3: Roy
+int help = 0;
 
 
 void setup()
@@ -73,6 +77,11 @@ void setup()
     pinMode(greenButton, INPUT_PULLUP);
     pinMode(redButton, INPUT_PULLUP);
 
+    Serial.begin(9600);
+    Wire.begin();
+    DS3231_init(DS3231_CONTROL_INTCN);
+
+    Serial1.begin(9600);
 
     data_initialisation(ListePatient);
 }
@@ -261,8 +270,60 @@ void AjustementDirection()
             MOVEMENTS_Turn(1, 165, 0.3);
             MOVEMENTS_Forward(9, 0.3);
             MOVEMENTS_Turn(0, 90, 0.3);
+            StateRoom++;
             StateStep = 2;
         }
+        else if (StepSuiveur == 1 && StateStep == 1 && StateRoom == 3)
+        {
+            shouldTurnLeft = 0;
+            shouldTurnRight = 0;
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+            MOVEMENTS_Turn(1, 165, 0.3);
+            MOVEMENTS_Forward(9, 0.3);
+            MOVEMENTS_Turn(0, 90, 0.3);
+            StateRoom = 0;
+            StepSuiveur = 4;
+            StateStep = 1;
+        }
+        else if (StepSuiveur == 1 && StateStep == 3 && StateRoom < 3)
+        {
+            shouldTurnLeft = 0;
+            shouldTurnRight = 0;
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+            MOVEMENTS_Turn(1, 165, 0.3);
+            MOVEMENTS_Forward(13, 0.3);
+            MOVEMENTS_Turn(0, 140, 0.3);
+            StateRoom++;
+            StepSuiveur = 2;
+            MOTOR_SetSpeed(0, -0.1);
+            MOTOR_SetSpeed(1, 0.1);
+        }
+        else if (StepSuiveur == 1 && StateStep == 3 && StateRoom == 3)
+        {
+            shouldTurnLeft = 0;
+            shouldTurnRight = 0;
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+            MOVEMENTS_Turn(1, 165, 0.3);
+            MOVEMENTS_Forward(9, 0.3);
+            MOVEMENTS_Turn(0, 90, 0.3);
+            StateRoom = 0;
+            StepSuiveur = 4;
+            StateStep = 1;
+        }
+        else if (StepSuiveur == 4)
+        {
+            MOVEMENTS_Turn(1, 90, 0.3);
+            MOVEMENTS_Forward(3, 0.3);
+            MOVEMENTS_Turn(0, 140, 0.3);
+            StepSuiveur = 2;
+            MOTOR_SetSpeed(0, -0.1);
+            MOTOR_SetSpeed(1, 0.1);
+        }
+
+
 }
 
 void MesureSonar()
@@ -300,7 +361,7 @@ void Interface()
     {
         if(StateAvertissement == 1 && StateAvertissementOld == 0)
         {
-            AUDIO_Play(a_Obstruction);
+            AUDIO_Play(a_Outroduction);
         }
         if(Timer % 100 == 0 && Timer % 200 != 0)
         {
@@ -317,73 +378,105 @@ void Interface()
     {
         int answer = 0;
         AUDIO_Play(a_Introduction);
-        delay(200);
+        delay(3000);
         digitalWrite(greenButtonLED, HIGH);
         digitalWrite(redButtonLED, HIGH);
-        while(true)
-        {
-            if(digitalRead(redButton) == LOW)
-            {
-                answer = 0;
-                break;
-            }
-            if(digitalRead(greenButton) == LOW)
-            {
-                answer = 1;
-                break;
-            }
-        }
+
+        answer = buttonResponse();
+
         digitalWrite(greenButtonLED, LOW);
         digitalWrite(redButtonLED, LOW);
-        if(answer == 0)
+        if(answer == 2)
         {
-            AUDIO_PlayBlocking(a_Obstruction);
-            delay(200);
-            while(true)
-            {
-
-            }
+            AUDIO_PlayBlocking(a_Outroduction);
+            StateStep = 3;
         }
-        else
+        else if(answer == 1)
         {
             AUDIO_PlayBlocking(a_DixSecondes);
             AUDIO_Play(a_RFID);
             char RFID[50] = "";
             delay(200);
+            Serial.println("Avant Rfid");
             CheckRFID(RFID);
+            Serial.println("Apres Rfid");
             for(int i = 0; i < NOMBRE_DE_PATIENTS; i++)
             {
                 if(strcmp(ListePatient[i].rfid_code, RFID) == 0)
                 {
                     PatientChoisi = i;
                     break;
+                    Serial.println("Boucle strcmp");
                 }
             }
             if(PatientChoisi == 0)
             {
-                AUDIO_Play(a_Tremblay);
-                delay(200);
+                if(ListePatient[PatientChoisi].room_number == StateRoom)
+                {
+                    AUDIO_PlayBlocking(a_Tremblay);
+                }
+                else
+                {
+                    StateStep = 3;
+                }
             }
             else if(PatientChoisi == 1)
             {
-                AUDIO_Play(a_Gagnon);
-                delay(200);
+                AUDIO_PlayBlocking(a_Gagnon); 
             }
             else if(PatientChoisi == 2)
             {
-                AUDIO_PlayBlocking(a_Roy);
-                delay(200);
+                AUDIO_PlayBlocking(a_Roy);   
+            }
+            else
+            {
+                StateStep = 3;
+            }
+            if(StateStep == 2)
+            {
+                AUDIO_PlayBlocking(a_Medication);
+                if(ListePatient[PatientChoisi].distributed == false && buttonResponse() == 2)
+                {
+                    ServoDropPills(RED_P, ListePatient[PatientChoisi].dailydrugs.red);
+                    ServoDropPills(BLACK_P, ListePatient[PatientChoisi].dailydrugs.green);
+                    ServoDropPills(BLUE_P, ListePatient[PatientChoisi].dailydrugs.blue);
+                    ServoDropPills(YELLOW_P, ListePatient[PatientChoisi].dailydrugs.yellow);
+                    AUDIO_PlayBlocking(a_Indication);
+                }
+                else
+                {
+                    StateStep = 3;
+                }
+            }
+            if(StateStep == 2)
+            {
+                AUDIO_PlayBlocking(a_Demande);
+                if(buttonResponse == 2)
+                {
+                    AUDIO_PlayBlocking(a_Outroduction);
+                }
+                else
+                {
+                    AUDIO_PlayBlocking(a_Outroduction);
+                    StateStep = 3;
+                }
             }
         }
-
+        else
+        {
+            StateStep = 3;
+        }
+        StepSuiveur = 4;
     }
 }
 
 void CheckRFID(char RFID_ID[50])
 {
-
-    char crecu, i, incoming = 0;
-    while (1)
+    int boucle = 1;
+    int incoming = 0;
+    char crecu = '0';
+    int i = 0;
+    while (boucle == 1)
     {
         if (Serial1.available())
         {
@@ -404,10 +497,11 @@ void CheckRFID(char RFID_ID[50])
                 for (i = 0; i < 10; i++)
                     Serial.print(RFID_ID[i]);
                 Serial.println("");
+                boucle = 0;
                 break;
             default:
                 if (incoming)
-                    RFID_ID[i++];
+                    RFID_ID[i++] = crecu;
                 break;
             }
         }
@@ -430,63 +524,61 @@ void data_initialisation(struct Patient Liste[5])
     strcpy(Liste[0].first_name, "Liam");
     strcpy(Liste[0].last_name, "Tremblay");
     Liste[0].room_number = 1;
-    strcpy(Liste[0].rfid_code, "**CODE"); //TODO ajouter code
-    Liste[0].morning.red = 0;
-    Liste[0].morning.green = 0;
-    Liste[0].morning.blue = 0;
-    Liste[0].morning.yellow = 0;
-    Liste[0].noon.red = 0;
-    Liste[0].noon.green = 0;
-    Liste[0].noon.blue = 0;
-    Liste[0].noon.yellow = 0;
-    Liste[0].souper.red = 0;
-    Liste[0].souper.green = 0;
-    Liste[0].souper.blue = 0;
-    Liste[0].souper.yellow = 0;
-    Liste[0].night.red = 0;
-    Liste[0].night.green = 0;
-    Liste[0].night.blue = 0;
-    Liste[0].night.yellow = 0;
+    strcpy(Liste[0].rfid_code, "0E008E6F32"); //TODO ajouter code
+    Liste[0].dailydrugs.red = 0;
+    Liste[0].dailydrugs.green = 0;
+    Liste[0].dailydrugs.blue = 0;
+    Liste[0].dailydrugs.yellow = 0;
+    Liste[0].distributed = false;
+
 
     strcpy(Liste[1].first_name, "Thomas");
     strcpy(Liste[1].last_name, "Gagnon");
     Liste[1].room_number = 2;
-    strcpy(Liste[1].rfid_code, "**CODE"); //TODO ajouter code
-    Liste[1].morning.red = 0;
-    Liste[1].morning.green = 0;
-    Liste[1].morning.blue = 0;
-    Liste[1].morning.yellow = 0;
-    Liste[1].noon.red = 0;
-    Liste[1].noon.green = 0;
-    Liste[1].noon.blue = 0;
-    Liste[1].noon.yellow = 0;
-    Liste[1].souper.red = 0;
-    Liste[1].souper.green = 0;
-    Liste[1].souper.blue = 0;
-    Liste[1].souper.yellow = 0;
-    Liste[1].night.red = 0;
-    Liste[1].night.green = 0;
-    Liste[1].night.blue = 0;
-    Liste[1].night.yellow = 0;
+    strcpy(Liste[1].rfid_code, "0E008E637F"); //TODO ajouter code
+    Liste[1].dailydrugs.red = 0;
+    Liste[1].dailydrugs.green = 0;
+    Liste[1].dailydrugs.blue = 0;
+    Liste[1].dailydrugs.yellow = 0;
+    Liste[1].distributed = false;
+ 
 
     strcpy(Liste[2].first_name, "Olivia");
     strcpy(Liste[2].last_name, "Roy");
     Liste[2].room_number = 3;
-    strcpy(Liste[2].rfid_code, "**CODE"); //TODO ajouter code
-    Liste[2].morning.red = 0;
-    Liste[2].morning.green = 0;
-    Liste[2].morning.blue = 0;
-    Liste[2].morning.yellow = 0;
-    Liste[2].noon.red = 0;
-    Liste[2].noon.green = 0;
-    Liste[2].noon.blue = 0;
-    Liste[2].noon.yellow = 0;
-    Liste[2].souper.red = 0;
-    Liste[2].souper.green = 0;
-    Liste[2].souper.blue = 0;
-    Liste[2].souper.yellow = 0;
-    Liste[2].night.red = 0;
-    Liste[2].night.green = 0;
-    Liste[2].night.blue = 0;
-    Liste[2].night.yellow = 0;
+    strcpy(Liste[2].rfid_code, "0F027D729D"); //TODO ajouter code
+    Liste[2].dailydrugs.red = 0;
+    Liste[2].dailydrugs.green = 0;
+    Liste[2].dailydrugs.blue = 0;
+    Liste[2].dailydrugs.yellow = 0;
+    Liste[2].distributed = false;
+
+
+}
+
+int buttonResponse(){
+  int buttonState = -1;
+  int timerButton = 0;
+   while (buttonState == -1 && timerButton <= 10000)
+    {
+      delay(50);
+      buttonState = witchButton();
+      timerButton += 50;
+    }
+
+    return buttonState;
+}
+
+int witchButton()
+{
+
+  if (digitalRead(greenButton) == LOW)
+  {
+    return 1;
+  }
+  else if (digitalRead(redButton) == LOW)
+  {
+    return 2;
+  }
+  return -1;
 }
