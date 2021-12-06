@@ -1,6 +1,7 @@
 #include <LibRobus.h>
 #include <math.h>
 #include <string.h>
+#include <Wire.h>
 
 #include "capteurCouleur.h"
 #include "Movements.h"
@@ -37,7 +38,7 @@ const uint16_t a_Outroduction = 10;
 int StateStep = 0;
 //0: Cherche infirmière, 1: Ronde normale: Entre dans chambre, 2: Quiz, 3: Retour infirmière
 int StepSuiveur = 0;
-//0: Suivi de ligne blanche, 1: Arrivée à une pièce, 2: Réentrée sur la ligne, 3: Obstruction, 4: Retour sur ligne, 5: skip chambre
+//0: Suivi de ligne blanche, 1: Arrivée à une pièce, 2: Réentrée sur la ligne, 3: Obstruction, 4: Retour sur ligne, 5: Attente
 int Timer = 0;
 int StateDirection = 0;
 int shouldTurnLeft = 0;
@@ -49,6 +50,8 @@ struct Patient ListePatient[5];
 int PatientChoisi = -1;
 //0: Infirmière, 1: Tremblay, 2: Gagnon, 3: Roy
 int help = 0;
+
+struct ts t; 
 
 
 void setup()
@@ -283,8 +286,7 @@ void AjustementDirection()
             MOVEMENTS_Forward(9, 0.3);
             MOVEMENTS_Turn(0, 90, 0.3);
             StateRoom = 0;
-            StepSuiveur = 4;
-            StateStep = 1;
+            StepSuiveur = 5;
         }
         else if (StepSuiveur == 1 && StateStep == 3 && StateRoom < 3)
         {
@@ -310,8 +312,7 @@ void AjustementDirection()
             MOVEMENTS_Forward(9, 0.3);
             MOVEMENTS_Turn(0, 90, 0.3);
             StateRoom = 0;
-            StepSuiveur = 4;
-            StateStep = 1;
+            StepSuiveur = 5;
         }
         else if (StepSuiveur == 4)
         {
@@ -321,6 +322,11 @@ void AjustementDirection()
             StepSuiveur = 2;
             MOTOR_SetSpeed(0, -0.1);
             MOTOR_SetSpeed(1, 0.1);
+        }
+        else if (StepSuiveur == 5 && t.min % 5 == 0)
+        {
+            StepSuiveur = 4;
+            StateStep = 1;
         }
 
 
@@ -339,7 +345,7 @@ void MesureSonar()
         StepSuiveur = 3;
     }
     else 
-        {
+    {
         StateAvertissementOld = StateAvertissement;
         StateAvertissement = 0;
         if(StateAvertissement == 0 && StateAvertissementOld == 1)
@@ -350,7 +356,7 @@ void MesureSonar()
             MOTOR_SetSpeed(0, -0.2);
             MOTOR_SetSpeed(1, -0.02);
         }
-        }
+    }
     
   }
 }
@@ -458,7 +464,15 @@ void Interface()
             if(StateStep == 2)
             {
                 AUDIO_PlayBlocking(a_Medication);
+
+                digitalWrite(greenButtonLED, HIGH);
+                digitalWrite(redButtonLED, HIGH);
+
                 answer = buttonResponse();
+
+                digitalWrite(greenButtonLED, LOW);
+                digitalWrite(redButtonLED, LOW);
+
                 if(ListePatient[PatientChoisi].distributed == false && answer == 2)
                 {
                     ServoDropPills(RED_P, ListePatient[PatientChoisi].dailydrugs.red);
@@ -475,7 +489,15 @@ void Interface()
             if(StateStep == 2)
             {
                 AUDIO_PlayBlocking(a_Demande);
+
+                digitalWrite(greenButtonLED, HIGH);
+                digitalWrite(redButtonLED, HIGH);
+
                 answer = buttonResponse();
+
+                digitalWrite(greenButtonLED, LOW);
+                digitalWrite(redButtonLED, LOW);
+
                 if(answer == 2)
                 {
                     AUDIO_PlayBlocking(a_Outroduction);
@@ -537,6 +559,10 @@ void CheckRFID(char RFID_ID[50])
 
 void TimerUpdate()
 {
+    if (Timer % 500 == 0)
+    {
+        DS3231_get(&t);
+    }
     if (Timer == 10000)
     {
         Timer = 0;
