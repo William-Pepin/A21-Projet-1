@@ -58,6 +58,7 @@ void setup()
 {
     BoardInit();
     AudioInit();
+    ServoInit();
     ColorCapteurBegin();
     SERVO_Enable(0);
     SERVO_SetAngle(0, 115);
