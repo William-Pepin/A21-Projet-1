@@ -34,6 +34,8 @@ const uint16_t a_Medication = 7;
 const uint16_t a_Indication = 8;
 const uint16_t a_Demande = 9;
 const uint16_t a_Outroduction = 10;
+const uint16_t a_song = 13;
+const uint16_t a_bitch = 14;
 
 int StateStep = 0;
 //0: Cherche infirmière, 1: Ronde normale: Entre dans chambre, 2: Quiz, 3: Retour infirmière
@@ -312,6 +314,7 @@ void AjustementDirection()
             MOVEMENTS_Turn(0, 90, 0.3);
             StateRoom = 0;
             StepSuiveur = 5;
+            AUDIO_Play(a_song);
         }
         else if (StepSuiveur == 4)
         {
@@ -366,7 +369,7 @@ void Interface()
     {
         if(StateAvertissement == 1 && StateAvertissementOld == 0)
         {
-            AUDIO_Play(a_Outroduction);
+            AUDIO_Play(a_bitch);
         }
         if(Timer % 100 == 0 && Timer % 200 != 0)
         {

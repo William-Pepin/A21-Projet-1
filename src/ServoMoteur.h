@@ -13,8 +13,8 @@
 
 // pas encore testé
 #define DEG_FOR_90_1  90
-#define DEG_FOR_180_1 180
-#define DEG_FOR_0_1   4
+#define DEG_FOR_180_1 175
+#define DEG_FOR_0_1   10
 
 #define SERVO_0 0
 #define SERVO_ONE 1
