@@ -60,8 +60,6 @@ void setup()
     AudioInit();
     ServoInit();
     ColorCapteurBegin();
-    SERVO_Enable(0);
-    SERVO_SetAngle(0, 115);
 
     pinMode(yellowLED, OUTPUT);
     digitalWrite(yellowLED, LOW);
