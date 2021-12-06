@@ -22,17 +22,17 @@ const int greenButton = 45;
 const int redButton = 49;
 const int NOMBRE_DE_PATIENTS = 3;
 
-const uint16_t a_Introduction = 1;
-const uint16_t a_DixSecondes = 2;
-const uint16_t a_RFID = 3;
-const uint16_t a_Tremblay = 4;
-const uint16_t a_Gagnon = 5;
-const uint16_t a_Roy = 6;
-const uint16_t a_Cote = 7;
-const uint16_t a_Medication = 8;
-const uint16_t a_Indication = 9;
-const uint16_t a_Demande = 10;
-const uint16_t a_Outroduction = 11;
+const uint16_t a_Introduction = 11;
+const uint16_t a_DixSecondes = 12;
+const uint16_t a_RFID = 2;
+const uint16_t a_Tremblay = 3;
+const uint16_t a_Gagnon = 4;
+const uint16_t a_Roy = 5;
+const uint16_t a_Cote = 6;
+const uint16_t a_Medication = 7;
+const uint16_t a_Indication = 8;
+const uint16_t a_Demande = 9;
+const uint16_t a_Outroduction = 10;
 
 int StateStep = 0;
 //0: Cherche infirmière, 1: Ronde normale: Entre dans chambre, 2: Quiz, 3: Retour infirmière
@@ -331,7 +331,7 @@ void MesureSonar()
   if (Timer % 100 == 0 && (StepSuiveur == 0 || StepSuiveur == 3))
   {
     float Distance = SONAR_GetRange(0);
-    Serial.println(Distance);
+    //Serial.println(Distance);
     if (Distance < 10)
     {
         StateAvertissementOld = StateAvertissement;
@@ -378,7 +378,7 @@ void Interface()
     {
         int answer = 0;
         AUDIO_Play(a_Introduction);
-        delay(3000);
+        delay(5000);
         digitalWrite(greenButtonLED, HIGH);
         digitalWrite(redButtonLED, HIGH);
 
@@ -400,20 +400,25 @@ void Interface()
             Serial.println("Avant Rfid");
             CheckRFID(RFID);
             Serial.println("Apres Rfid");
+            int str = 1;
             for(int i = 0; i < NOMBRE_DE_PATIENTS; i++)
             {
-                if(strcmp(ListePatient[i].rfid_code, RFID) == 0)
+                str = strcmp(ListePatient[i].rfid_code, RFID);
+                if(str == 0)
                 {
                     PatientChoisi = i;
                     break;
-                    Serial.println("Boucle strcmp");
                 }
             }
+            Serial.println(PatientChoisi);
+            Serial.println(StateRoom);
             if(PatientChoisi == 0)
             {
                 if(ListePatient[PatientChoisi].room_number == StateRoom)
                 {
+                    delay(200);
                     AUDIO_PlayBlocking(a_Tremblay);
+                    delay(3500);
                 }
                 else
                 {
@@ -422,11 +427,29 @@ void Interface()
             }
             else if(PatientChoisi == 1)
             {
-                AUDIO_PlayBlocking(a_Gagnon); 
+                if(ListePatient[PatientChoisi].room_number == StateRoom)
+                {
+                    delay(200);
+                    AUDIO_PlayBlocking(a_Gagnon);
+                    delay(3500);
+                }
+                else
+                {
+                    StateStep = 3;
+                }
             }
             else if(PatientChoisi == 2)
             {
-                AUDIO_PlayBlocking(a_Roy);   
+                if(ListePatient[PatientChoisi].room_number == StateRoom)
+                {
+                    delay(200);
+                    AUDIO_PlayBlocking(a_Roy);
+                    delay(3500);
+                }
+                else
+                {
+                    StateStep = 3;
+                }   
             }
             else
             {
@@ -435,7 +458,8 @@ void Interface()
             if(StateStep == 2)
             {
                 AUDIO_PlayBlocking(a_Medication);
-                if(ListePatient[PatientChoisi].distributed == false && buttonResponse() == 2)
+                answer = buttonResponse();
+                if(ListePatient[PatientChoisi].distributed == false && answer == 2)
                 {
                     ServoDropPills(RED_P, ListePatient[PatientChoisi].dailydrugs.red);
                     ServoDropPills(BLACK_P, ListePatient[PatientChoisi].dailydrugs.green);
@@ -445,15 +469,17 @@ void Interface()
                 }
                 else
                 {
-                    StateStep = 3;
+                    StateStep = 1;
                 }
             }
             if(StateStep == 2)
             {
                 AUDIO_PlayBlocking(a_Demande);
-                if(buttonResponse == 2)
+                answer = buttonResponse();
+                if(answer == 2)
                 {
                     AUDIO_PlayBlocking(a_Outroduction);
+                    StateStep = 1;
                 }
                 else
                 {
@@ -492,6 +518,7 @@ void CheckRFID(char RFID_ID[50])
             case 0x03:
                 // END OF TRANSMIT
                 AX_BuzzerOFF();
+                RFID_ID[11] = '\0';
                 incoming = 0;
                 // Affiche le code recu sans valider le checksum
                 for (i = 0; i < 10; i++)
@@ -524,7 +551,7 @@ void data_initialisation(struct Patient Liste[5])
     strcpy(Liste[0].first_name, "Liam");
     strcpy(Liste[0].last_name, "Tremblay");
     Liste[0].room_number = 1;
-    strcpy(Liste[0].rfid_code, "0E008E6F32"); //TODO ajouter code
+    strcpy(Liste[0].rfid_code, "0E008E6F32"); 
     Liste[0].dailydrugs.red = 0;
     Liste[0].dailydrugs.green = 0;
     Liste[0].dailydrugs.blue = 0;
@@ -535,7 +562,7 @@ void data_initialisation(struct Patient Liste[5])
     strcpy(Liste[1].first_name, "Thomas");
     strcpy(Liste[1].last_name, "Gagnon");
     Liste[1].room_number = 2;
-    strcpy(Liste[1].rfid_code, "0E008E637F"); //TODO ajouter code
+    strcpy(Liste[1].rfid_code, "0E008E637F"); //0E008E637F
     Liste[1].dailydrugs.red = 0;
     Liste[1].dailydrugs.green = 0;
     Liste[1].dailydrugs.blue = 0;
@@ -546,7 +573,7 @@ void data_initialisation(struct Patient Liste[5])
     strcpy(Liste[2].first_name, "Olivia");
     strcpy(Liste[2].last_name, "Roy");
     Liste[2].room_number = 3;
-    strcpy(Liste[2].rfid_code, "0F027D729D"); //TODO ajouter code
+    strcpy(Liste[2].rfid_code, "0F027D729D"); //0F027D729D
     Liste[2].dailydrugs.red = 0;
     Liste[2].dailydrugs.green = 0;
     Liste[2].dailydrugs.blue = 0;
