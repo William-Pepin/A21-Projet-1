@@ -46,7 +46,7 @@ int StateAvertissement = 0;
 int StateAvertissementOld = 0;
 int StateRoom = 0;
 struct Patient ListePatient[5];
-int PatientChoisi;
+int PatientChoisi = -1;
 //0: Infirmière, 1: Tremblay, 2: Gagnon, 3: Roy
 int help = 0;
 
@@ -551,18 +551,18 @@ void data_initialisation(struct Patient Liste[5])
     strcpy(Liste[0].first_name, "Liam");
     strcpy(Liste[0].last_name, "Tremblay");
     Liste[0].room_number = 1;
-    strcpy(Liste[0].rfid_code, "0E008E6F32"); 
-    Liste[0].dailydrugs.red = 0;
-    Liste[0].dailydrugs.green = 0;
-    Liste[0].dailydrugs.blue = 0;
-    Liste[0].dailydrugs.yellow = 0;
+    strcpy(Liste[0].rfid_code, "0E008E6F32D"); 
+    Liste[0].dailydrugs.red = 1;
+    Liste[0].dailydrugs.green = 2;
+    Liste[0].dailydrugs.blue = 1;
+    Liste[0].dailydrugs.yellow = 3;
     Liste[0].distributed = false;
 
 
     strcpy(Liste[1].first_name, "Thomas");
     strcpy(Liste[1].last_name, "Gagnon");
     Liste[1].room_number = 2;
-    strcpy(Liste[1].rfid_code, "0E008E637F"); //0E008E637F
+    strcpy(Liste[1].rfid_code, "0E008E637F9"); //0E008E637F
     Liste[1].dailydrugs.red = 0;
     Liste[1].dailydrugs.green = 0;
     Liste[1].dailydrugs.blue = 0;
@@ -573,7 +573,7 @@ void data_initialisation(struct Patient Liste[5])
     strcpy(Liste[2].first_name, "Olivia");
     strcpy(Liste[2].last_name, "Roy");
     Liste[2].room_number = 3;
-    strcpy(Liste[2].rfid_code, "0F027D729D"); //0F027D729D
+    strcpy(Liste[2].rfid_code, "0F027D729D9"); //0F027D729D
     Liste[2].dailydrugs.red = 0;
     Liste[2].dailydrugs.green = 0;
     Liste[2].dailydrugs.blue = 0;
