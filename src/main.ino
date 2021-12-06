@@ -481,9 +481,12 @@ void Interface()
                     ServoDropPills(YELLOW_P, ListePatient[PatientChoisi].dailydrugs.yellow);
                     AUDIO_PlayBlocking(a_Indication);
                 }
+                else if(answer == 1){
+                    StateStep = 1;
+                }
                 else
                 {
-                    StateStep = 1;
+                    StateStep = 3;
                 }
             }
             if(StateStep == 2)
@@ -578,10 +581,10 @@ void data_initialisation(struct Patient Liste[5])
     strcpy(Liste[0].last_name, "Tremblay");
     Liste[0].room_number = 1;
     strcpy(Liste[0].rfid_code, "0E008E6F32D"); 
-    Liste[0].dailydrugs.red = 1;
+    Liste[0].dailydrugs.red = 0;
     Liste[0].dailydrugs.green = 2;
     Liste[0].dailydrugs.blue = 1;
-    Liste[0].dailydrugs.yellow = 3;
+    Liste[0].dailydrugs.yellow = 0;
     Liste[0].distributed = false;
 
 
@@ -589,10 +592,10 @@ void data_initialisation(struct Patient Liste[5])
     strcpy(Liste[1].last_name, "Gagnon");
     Liste[1].room_number = 2;
     strcpy(Liste[1].rfid_code, "0E008E637F9"); //0E008E637F
-    Liste[1].dailydrugs.red = 0;
+    Liste[1].dailydrugs.red = 1;
     Liste[1].dailydrugs.green = 0;
-    Liste[1].dailydrugs.blue = 0;
-    Liste[1].dailydrugs.yellow = 0;
+    Liste[1].dailydrugs.blue = 1;
+    Liste[1].dailydrugs.yellow = 1;
     Liste[1].distributed = false;
  
 
@@ -601,9 +604,9 @@ void data_initialisation(struct Patient Liste[5])
     Liste[2].room_number = 3;
     strcpy(Liste[2].rfid_code, "0F027D729D9"); //0F027D729D
     Liste[2].dailydrugs.red = 0;
-    Liste[2].dailydrugs.green = 0;
-    Liste[2].dailydrugs.blue = 0;
-    Liste[2].dailydrugs.yellow = 0;
+    Liste[2].dailydrugs.green = 1;
+    Liste[2].dailydrugs.blue = 1;
+    Liste[2].dailydrugs.yellow = 2;
     Liste[2].distributed = false;
 
 
