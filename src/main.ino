@@ -340,7 +340,7 @@ void MesureSonar()
   {
     float Distance = SONAR_GetRange(0);
     //Serial.println(Distance);
-    if (Distance < 10)
+    if (Distance < 15)
     {
         StateAvertissementOld = StateAvertissement;
         StateAvertissement = 1;
