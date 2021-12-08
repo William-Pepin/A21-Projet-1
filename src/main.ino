@@ -1,214 +1,109 @@
 #include <LibRobus.h>
 #include <math.h>
-#include "CapteurCouleur.h"
+#include <string.h>
+#include <Wire.h>
 
-const int redLED = 39;
+#include "capteurCouleur.h"
+#include "Movements.h"
+#include "Tests.h"
+#include "Distribution.h"
+#include "Patient.h"
+#include "capteurSonar.h"
+#include "../lib/ds3231/ds3231.h"
+#include "ServoMoteur.h"
+
+#define COULEUR_CHAMBRE (0x02)
+#define COULEUR_POSTE (0x05)
+
+const int redButtonLED = 39;
 const int yellowLED = 41;
-const int greenLED = 43;
-const int blueLED = 45;
+const int blueLED = 43;
+const int greenButtonLED = 47;
+const int greenButton = 45;
+const int redButton = 49;
+const int NOMBRE_DE_PATIENTS = 3;
 
-int StateSignalSonore = 0;
-int StateQuilleTombee = 0;
-int StateCouleur = 0; //noir=0, blanc=1, rouge=2, etc.
-int StateDirection = 0;
+const uint16_t a_Introduction = 11;
+const uint16_t a_DixSecondes = 12;
+const uint16_t a_RFID = 2;
+const uint16_t a_Tremblay = 3;
+const uint16_t a_Gagnon = 4;
+const uint16_t a_Roy = 5;
+const uint16_t a_Cote = 6;
+const uint16_t a_Medication = 7;
+const uint16_t a_Indication = 8;
+const uint16_t a_Demande = 9;
+const uint16_t a_Outroduction = 10;
+const uint16_t a_song = 13;
+const uint16_t a_bitch = 14;
+
+int StateStep = 0;
+//0: Cherche infirmière, 1: Ronde normale: Entre dans chambre, 2: Quiz, 3: Retour infirmière
+int StepSuiveur = 0;
+//0: Suivi de ligne blanche, 1: Arrivée à une pièce, 2: Réentrée sur la ligne, 3: Obstruction, 4: Retour sur ligne, 5: Attente
 int Timer = 0;
-int shouldTurnRight = 0;
+int StateDirection = 0;
 int shouldTurnLeft = 0;
-bool LineFollowerRightDone = false;
-bool LineFollowerLeftDone = false;
-const double WHEEL_CIRCONFERENCE = 2 * PI * 1.5;
-const double ROBOT_CIRCONFERENCE_RIGHT = 2 * PI * 3.75;
-const double ROBOT_CIRCONFERENCE_LEFT = 2 * PI * 3.85;
-const double MIN_SPEED = 0.07;
-uint8_t couleur = 0;
-;
+int shouldTurnRight = 0;
+int StateAvertissement = 0;
+int StateAvertissementOld = 0;
+int StateRoom = 0;
+struct Patient ListePatient[5];
+int PatientChoisi = -1;
+//0: Infirmière, 1: Tremblay, 2: Gagnon, 3: Roy
+int help = 0;
+
+struct ts t; 
+
 
 void setup()
 {
-  BoardInit();
-  ColorCapteurBegin();
-  SERVO_Enable(0);
-  SERVO_SetAngle(0, 115);
-  delay(100);
-  pinMode(yellowLED, OUTPUT);
-  digitalWrite(yellowLED, LOW);
-  pinMode(blueLED, OUTPUT);
-  digitalWrite(blueLED, LOW);
-  pinMode(redLED, OUTPUT);
-  digitalWrite(redLED, LOW);
-  pinMode(greenLED, OUTPUT);
-  digitalWrite(greenLED, LOW);
+    BoardInit();
+    AudioInit();
+    ServoInit();
+    ColorCapteurBegin();
+
+    pinMode(yellowLED, OUTPUT);
+    digitalWrite(yellowLED, LOW);
+
+    pinMode(blueLED, OUTPUT);
+    digitalWrite(blueLED, LOW);
+
+    pinMode(yellowLED, OUTPUT);
+    digitalWrite(yellowLED, LOW);
+
+    pinMode(greenButtonLED, OUTPUT);
+    digitalWrite(greenButtonLED, LOW);
+
+    pinMode(redButtonLED, OUTPUT);
+    digitalWrite(redButtonLED, LOW);
+
+    pinMode(greenButton, INPUT_PULLUP);
+    pinMode(redButton, INPUT_PULLUP);
+
+    Serial.begin(9600);
+    Wire.begin();
+    DS3231_init(DS3231_CONTROL_INTCN);
+
+    Serial1.begin(9600);
+
+    data_initialisation(ListePatient);
 }
+
 
 void loop()
 {
-  while (!(LineFollowerLeftDone && LineFollowerRightDone))
-  {
-    AjustementDirection();
     MesureSuiveur();
     MesureSonar();
+    Interface();
+    AjustementDirection();
     TimerUpdate();
-    Serial.println(StateQuilleTombee);
-  }
-  CouleurSequence();
-  StateQuilleTombee = 0;
-  LineFollowerLeftDone = false;
-  LineFollowerRightDone = false;
-}
-void TesterValeur()
-{
-  int mesureGauche = analogRead(A7);
-  int mesureDroite = analogRead(A5);
-  Serial.print("Gauche : ");
-  Serial.println(mesureGauche);
-  Serial.print("Droite : ");
-  Serial.println(mesureDroite);
-  delay(1000);
 }
 
-void TesterCouleur()
-{
-  uint8_t couleur = GetCouleur();
-  Serial.println(couleur);
-  bool isBlue = couleur == BLUE;
-  bool isRed = couleur == RED;
-  bool isYellow = couleur == YELLOW;
-  Serial.println(isBlue);
-  Serial.println(isRed);
-  Serial.println(isYellow);
-  delay(1000);
-}
-
-void CouleurSequence()
-{
-  MOVEMENTS_Turn(0, 180, 0.4);
-  MOVEMENTS_Forward(10, 0.4);
-  uint8_t couleur = GetCouleur();
-  Serial.println(couleur);
-
-  CAGE_Open();
-  MOVEMENTS_Forward(9.8, 0.4);
-  CAGE_Close();
-
-  if (couleur == BLUE)
-  {
-    // Bleu
-    digitalWrite(blueLED, HIGH);
-    MOVEMENTS_Turn(0, 90, 0.4);
-    MOVEMENTS_Forward(16, 0.4);
-    MOVEMENTS_Turn(1, 90, 0.4);
-    MOVEMENTS_Forward(90, 0.8);
-    CAGE_Open();
-    delay(1000);
-    MOTOR_SetSpeed(0, -.4);
-    MOTOR_SetSpeed(1, -.4);
-    delay(1000);
-    MOTOR_SetSpeed(0, 0);
-    MOTOR_SetSpeed(1, 0);
-    CAGE_Close();
-    digitalWrite(blueLED, LOW);
-    MOVEMENTS_Turn(1, 180, 0.4);
-    MOVEMENTS_Forward(100, .8);
-    MOVEMENTS_Turn(1, 160, 0.4);
-    MOTOR_SetSpeed(0, -.3);
-    MOTOR_SetSpeed(1, -.2);
-  }
-  else if (couleur == RED)
-  {
-    // Rouge
-    digitalWrite(redLED, HIGH);
-    MOVEMENTS_Forward(90, 0.8);
-    CAGE_Open();
-    delay(1000);
-    MOTOR_SetSpeed(0, -.4);
-    MOTOR_SetSpeed(1, -.4);
-    delay(1000);
-    MOTOR_SetSpeed(0, 0);
-    MOTOR_SetSpeed(1, 0);
-    CAGE_Close();
-    digitalWrite(redLED, LOW);
-    MOVEMENTS_Turn(1, 180, 0.4);
-    MOVEMENTS_Forward(123, .8);
-    MOVEMENTS_Turn(1, 25, 0.3);
-    MOTOR_SetSpeed(0, -.2);
-    MOTOR_SetSpeed(1, -.3);
-  }
-  else
-  {
-    digitalWrite(yellowLED, HIGH);
-    // Jaune
-    MOVEMENTS_Turn(1, 90, 0.4);
-    MOVEMENTS_Forward(19, 0.4);
-    MOVEMENTS_Turn(0, 90, 0.4);
-    MOVEMENTS_Forward(90, 0.8);
-    CAGE_Open();
-    delay(1000);
-    MOTOR_SetSpeed(0, -.4);
-    MOTOR_SetSpeed(1, -.4);
-    delay(1000);
-    MOTOR_SetSpeed(0, 0);
-    MOTOR_SetSpeed(1, 0);
-    CAGE_Close();
-    digitalWrite(yellowLED, LOW);
-    MOVEMENTS_Turn(1, 180, 0.4);
-    MOVEMENTS_Forward(120, .8);
-    MOVEMENTS_Turn(1, 90, 0.4);
-    MOTOR_SetSpeed(0, .25);
-    MOTOR_SetSpeed(1, -.2);
-  }
-}
-
-void CAGE_Open()
-{
-  SERVO_SetAngle(0, 30);
-}
-
-void CAGE_Close()
-{
-  SERVO_SetAngle(0, 115);
-}
-
-void MesureSonar()
-{
-  if (Timer == 100)
-  {
-    if (StateSignalSonore > 10)
-    {
-      digitalWrite(blueLED, HIGH);
-      digitalWrite(redLED, HIGH);
-      digitalWrite(yellowLED, HIGH);
-      float Distance = SONAR_GetRange(0);
-      if (Distance < 35)
-      {
-        digitalWrite(blueLED, LOW);
-        digitalWrite(redLED, LOW);
-        digitalWrite(yellowLED, LOW);
-        digitalWrite(greenLED, HIGH);
-        delay(200);
-        MOTOR_SetSpeed(0, 0);
-        MOTOR_SetSpeed(1, 0);
-        MOVEMENTS_Turn(0, 110, 0.4);
-        MOVEMENTS_Forward(Distance - 5, 0.5);
-        MOVEMENTS_Turn(1, 180, 0.4);
-        MOVEMENTS_Forward(Distance - 5, 0.5);
-        MOTOR_SetSpeed(0, -0.15);
-        MOTOR_SetSpeed(1, 0.15);
-        digitalWrite(greenLED, LOW);
-        StateSignalSonore = 0;
-        StateQuilleTombee = 1;
-        StateDirection = 0;
-      }
-    }
-    else
-    {
-      StateSignalSonore = 0;
-    }
-  }
-}
 
 void MesureSuiveur()
 {
-  /*
+    /*
         StateDirection:                V1 (rouge)   |   V2 (jaune)   |   V3 (rouge)   |   V4 (bleu)   |   Mesure Analogique:
         1                                                                                                    8
         2                                    X                                                               540
@@ -228,523 +123,520 @@ void MesureSuiveur()
         16                                   X               X               X               X               1008
 
         Mesures triées: 8; 72; 145; 216; 273; 341; 410; 477; 540; 606; 677; 742; 807; 872; 942; 1008
-        */
-  int mesure = analogRead(A6);
-  int mesureGauche = analogRead(A7);
-  int mesureDroite = analogRead(A5);
+    */
+    
+    int mesure = analogRead(A6);
+    int mesureGauche = analogRead(A7);
+    int mesureDroite = analogRead(A5);
 
-  if (mesureDroite < 850)
+    if (mesureDroite < 850)
     shouldTurnRight++;
-  else
-  {
+    else
     shouldTurnRight = 0;
-  }
-  if (mesureGauche < 670)
+
+    if (mesureGauche < 670)
     shouldTurnLeft++;
-  else
-  {
+    else
     shouldTurnLeft = 0;
-  }
 
-  if (shouldTurnLeft > 4 && StateQuilleTombee == 7)
-  {
-    MOTOR_SetSpeed(1, 0);
-    StateDirection = -1;
-    LineFollowerLeftDone = true;
-  }
+    if (shouldTurnLeft > 4 && shouldTurnRight > 4 && StepSuiveur == 0)
+    {
+        StepSuiveur = 1;
+        shouldTurnLeft = 0;
+        shouldTurnRight = 0;
+    }
 
-  if (shouldTurnRight > 4 && StateQuilleTombee == 7)
-  {
-    delay(65);
-    MOTOR_SetSpeed(0, 0);
-    StateDirection = -1;
-    LineFollowerRightDone = true;
-  }
-
-  else if (shouldTurnRight > 4 && StateQuilleTombee == 2)
-    StateQuilleTombee = 3;
-  else if (shouldTurnLeft > 4 && StateQuilleTombee == 2)
-    StateQuilleTombee = 4;
-  else if (mesure < 40)
-  {
-    StateDirection = 1;
-  }
-  else if (mesure >= 40 && mesure < 105)
-  {
-    StateDirection = 5;
-    StateSignalSonore++;
-  }
-  else if (mesure >= 105 && mesure < 180)
-  {
-    StateDirection = 4;
-  }
-  else if (mesure >= 180 && mesure < 245)
-  {
-    StateDirection = 8;
-    StateSignalSonore++;
-  }
-  else if (mesure >= 245 && mesure < 300)
-  {
-    StateDirection = 3;
-  }
-  else if (mesure >= 300 && mesure < 375)
-  {
-    StateDirection = 10;
-    StateSignalSonore++;
-  }
-  else if (mesure >= 375 && mesure < 440)
-  {
-    StateDirection = 7;
-  }
-  else if (mesure >= 440 && mesure < 500)
-  {
-    StateDirection = 13;
-    StateSignalSonore++;
-  }
-  else if (mesure >= 500 && mesure < 575)
-  {
-    StateDirection = 2;
-  }
-  else if (mesure >= 575 && mesure < 640)
-  {
-    StateDirection = 11;
-    StateSignalSonore++;
-  }
-  else if (mesure >= 640 && mesure < 700)
-  {
-    StateDirection = 9;
-  }
-  else if (mesure >= 700 && mesure < 775)
-  {
-    StateDirection = 15;
-    StateSignalSonore++;
-  }
-  else if (mesure >= 775 && mesure < 840)
-  {
-    StateDirection = 6;
-  }
-  else if (mesure >= 840 && mesure < 900)
-  {
-    StateDirection = 14;
-    StateSignalSonore++;
-  }
-  else if (mesure >= 900 && mesure < 975)
-  {
-    StateDirection = 12;
-  }
-  else if (mesure >= 975)
-  {
-    StateDirection = 16;
-    StateSignalSonore++;
-  }
+    if (mesure < 40)
+    {
+        StateDirection = 1;
+    }
+    else if (mesure >= 40 && mesure < 105)
+    {
+        StateDirection = 5;
+    }
+    else if (mesure >= 105 && mesure < 180)
+    {
+        StateDirection = 4;
+    }
+    else if (mesure >= 180 && mesure < 245)
+    {
+        StateDirection = 8;
+    }
+    else if (mesure >= 245 && mesure < 300)
+    {
+        StateDirection = 3;
+    }
+    else if (mesure >= 300 && mesure < 375)
+    {
+        StateDirection = 10;
+    }
+    else if (mesure >= 375 && mesure < 440)
+    {
+        StateDirection = 7;
+    }
+    else if (mesure >= 440 && mesure < 500)
+    {
+        StateDirection = 13;
+    }
+    else if (mesure >= 500 && mesure < 575)
+    {
+        StateDirection = 2;
+    }
+    else if (mesure >= 575 && mesure < 640)
+    {
+        StateDirection = 11;
+    }
+    else if (mesure >= 640 && mesure < 700)
+    {
+        StateDirection = 9;
+    }
+    else if (mesure >= 700 && mesure < 775)
+    {
+        StateDirection = 15;
+    }
+    else if (mesure >= 775 && mesure < 840)
+    {
+        StateDirection = 6;
+    }
+    else if (mesure >= 840 && mesure < 900)
+    {
+        StateDirection = 14;
+    }
+    else if (mesure >= 900 && mesure < 975)
+    {
+        StateDirection = 12;
+    }
+    else if (mesure >= 975)
+    {
+        StateDirection = 16;
+    }
 }
 
 void AjustementDirection()
 {
-  if (Timer % 10 == 0)
+        if (StepSuiveur == 0)
+        {
+            if (StateDirection == 0)
+            {
+                MOTOR_SetSpeed(0, -0.2);
+                MOTOR_SetSpeed(1, -0.2);
+            }
+            else if (StateDirection == 3 || StateDirection == 10)
+            {
+                MOTOR_SetSpeed(0, -0.2);
+                MOTOR_SetSpeed(1, -0.2);
+            }
+            else if (StateDirection == 2 || StateDirection == 11)
+            {
+                MOTOR_SetSpeed(0, -0.02);
+                MOTOR_SetSpeed(1, -0.2);
+            }
+            else if (StateDirection == 4 || StateDirection == 8)
+            {
+                MOTOR_SetSpeed(0, -0.2);
+                MOTOR_SetSpeed(1, -0.02);
+            }
+        }
+        else if (StepSuiveur == 1 && StateStep == 0)
+        {
+            shouldTurnLeft = 0;
+            shouldTurnRight = 0;
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+            MOVEMENTS_Turn(1, 165, 0.3);
+            MOVEMENTS_Forward(13, 0.3);
+            MOVEMENTS_Turn(0, 65, 0.3);
+            uint8_t couleur = GetCouleur();
+            if(couleur == COULEUR_POSTE)
+                StateStep = 1;
+            MOVEMENTS_Turn(0, 75, 0.3);
+            StepSuiveur = 2;
+            MOTOR_SetSpeed(0, -0.1);
+            MOTOR_SetSpeed(1, 0.1);
+        }
+        else if (StepSuiveur == 2 && StateDirection == 3)
+        {
+            MOTOR_SetSpeed(0, -0.2);
+            MOTOR_SetSpeed(1, -0.2);
+            StepSuiveur = 0;
+        }
+        else if (StepSuiveur == 3)
+        {
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+        }
+        else if (StepSuiveur == 1 && StateStep == 1 && StateRoom < 3)
+        {
+            shouldTurnLeft = 0;
+            shouldTurnRight = 0;
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+            MOVEMENTS_Turn(1, 165, 0.3);
+            MOVEMENTS_Forward(9, 0.3);
+            MOVEMENTS_Turn(0, 90, 0.3);
+            StateRoom++;
+            StateStep = 2;
+        }
+        else if (StepSuiveur == 1 && StateStep == 1 && StateRoom == 3)
+        {
+            shouldTurnLeft = 0;
+            shouldTurnRight = 0;
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+            MOVEMENTS_Turn(1, 165, 0.3);
+            MOVEMENTS_Forward(9, 0.3);
+            MOVEMENTS_Turn(0, 90, 0.3);
+            StateRoom = 0;
+            StepSuiveur = 5;
+        }
+        else if (StepSuiveur == 1 && StateStep == 3 && StateRoom < 3)
+        {
+            shouldTurnLeft = 0;
+            shouldTurnRight = 0;
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+            MOVEMENTS_Turn(1, 165, 0.3);
+            MOVEMENTS_Forward(13, 0.3);
+            MOVEMENTS_Turn(0, 140, 0.3);
+            StateRoom++;
+            StepSuiveur = 2;
+            MOTOR_SetSpeed(0, -0.1);
+            MOTOR_SetSpeed(1, 0.1);
+        }
+        else if (StepSuiveur == 1 && StateStep == 3 && StateRoom == 3)
+        {
+            shouldTurnLeft = 0;
+            shouldTurnRight = 0;
+            MOTOR_SetSpeed(0, 0);
+            MOTOR_SetSpeed(1, 0);
+            MOVEMENTS_Turn(1, 165, 0.3);
+            MOVEMENTS_Forward(9, 0.3);
+            MOVEMENTS_Turn(0, 90, 0.3);
+            StateRoom = 0;
+            StepSuiveur = 5;
+            AUDIO_Play(a_song);
+        }
+        else if (StepSuiveur == 4)
+        {
+            MOVEMENTS_Turn(1, 90, 0.3);
+            MOVEMENTS_Forward(3, 0.3);
+            MOVEMENTS_Turn(0, 140, 0.3);
+            StepSuiveur = 2;
+            MOTOR_SetSpeed(0, -0.1);
+            MOTOR_SetSpeed(1, 0.1);
+        }
+        else if (StepSuiveur == 5 && t.min % 5 == 0)
+        {
+            StepSuiveur = 4;
+            StateStep = 1;
+        }
+
+
+}
+
+void MesureSonar()
+{
+  if (Timer % 100 == 0 && (StepSuiveur == 0 || StepSuiveur == 3))
   {
-    if (StateDirection == 0)
+    float Distance = SONAR_GetRange(0);
+    //Serial.println(Distance);
+    if (Distance < 15)
     {
-      MOTOR_SetSpeed(0, -0.4);
-      MOTOR_SetSpeed(1, -0.4);
+        StateAvertissementOld = StateAvertissement;
+        StateAvertissement = 1;
+        StepSuiveur = 3;
     }
-    else if (StateDirection == 3 && StateQuilleTombee == 1)
+    else 
     {
-      MOTOR_SetSpeed(0, -0.4);
-      MOTOR_SetSpeed(1, -0.4);
-      StateQuilleTombee = 2;
-      shouldTurnLeft = 0;
-      shouldTurnRight = 0;
+        StateAvertissementOld = StateAvertissement;
+        StateAvertissement = 0;
+        if(StateAvertissement == 0 && StateAvertissementOld == 1)
+        {
+            digitalWrite(greenButtonLED, LOW);
+            digitalWrite(redButtonLED, LOW);
+            StepSuiveur = 2;
+            MOTOR_SetSpeed(0, -0.2);
+            MOTOR_SetSpeed(1, -0.02);
+        }
     }
-    else if (StateDirection == 3 && StateQuilleTombee == 6)
-    {
-      MOTOR_SetSpeed(0, -0.2);
-      MOTOR_SetSpeed(1, -0.2);
-      StateQuilleTombee = 7;
-    }
-    else if ((StateDirection == 3 || StateDirection == 10) && (StateQuilleTombee == 0 || StateQuilleTombee == 2))
-    {
-      MOTOR_SetSpeed(0, -0.4);
-      MOTOR_SetSpeed(1, -0.4);
-    }
-    else if ((StateDirection == 2 || StateDirection == 11) && (StateQuilleTombee == 0 || StateQuilleTombee == 2))
-    {
-      MOTOR_SetSpeed(0, -0.1);
-      MOTOR_SetSpeed(1, -0.4);
-    }
-    else if ((StateDirection == 4 || StateDirection == 8) && (StateQuilleTombee == 0 || StateQuilleTombee == 2))
-    {
-      MOTOR_SetSpeed(0, -0.4);
-      MOTOR_SetSpeed(1, -0.1);
-    }
-    else if ((StateDirection == 3 || StateDirection == 10) && StateQuilleTombee == 7)
-    {
-      MOTOR_SetSpeed(0, -0.2);
-      MOTOR_SetSpeed(1, -0.2);
-    }
-    else if ((StateDirection == 2 || StateDirection == 11) && StateQuilleTombee == 7)
-    {
-      MOTOR_SetSpeed(0, -0.0);
-      MOTOR_SetSpeed(1, -0.2);
-    }
-    else if ((StateDirection == 4 || StateDirection == 8) && StateQuilleTombee == 7)
-    {
-      MOTOR_SetSpeed(0, -0.2);
-      MOTOR_SetSpeed(1, -0.0);
-    }
-    else if (StateQuilleTombee == 3)
-    {
-      MOTOR_SetSpeed(0, 0.15);
-      MOTOR_SetSpeed(1, -0.15);
-      StateQuilleTombee = 6;
-      delay(400);
-    }
-    else if (StateQuilleTombee == 4)
-    {
-      MOTOR_SetSpeed(0, -0.15);
-      MOTOR_SetSpeed(1, 0.15);
-      StateQuilleTombee = 6;
-      delay(400);
-    }
-    //else if (StateQuilleTombee == 5)
-    //{
-    //  MOTOR_SetSpeed(0, 0);
-    //  MOTOR_SetSpeed(1, 0);
-    //}
+    
   }
+}
+
+void Interface()
+{
+    if(StepSuiveur == 3)
+    {
+        if(StateAvertissement == 1 && StateAvertissementOld == 0)
+        {
+            AUDIO_Play(a_bitch);
+        }
+        if(Timer % 100 == 0 && Timer % 200 != 0)
+        {
+            digitalWrite(greenButtonLED, HIGH);
+            digitalWrite(redButtonLED, HIGH);
+        }
+        else if(Timer % 200 == 0)
+        {
+            digitalWrite(greenButtonLED, LOW);
+            digitalWrite(redButtonLED, LOW);
+        }  
+    }
+    else if(StateStep == 2)
+    {
+        int answer = 0;
+        AUDIO_Play(a_Introduction);
+        delay(5000);
+        digitalWrite(greenButtonLED, HIGH);
+        digitalWrite(redButtonLED, HIGH);
+
+        answer = buttonResponse();
+
+        digitalWrite(greenButtonLED, LOW);
+        digitalWrite(redButtonLED, LOW);
+        if(answer == 2)
+        {
+            AUDIO_PlayBlocking(a_Outroduction);
+            StateStep = 3;
+        }
+        else if(answer == 1)
+        {
+            AUDIO_PlayBlocking(a_DixSecondes);
+            AUDIO_Play(a_RFID);
+            char RFID[50] = "";
+            delay(200);
+            Serial.println("Avant Rfid");
+            CheckRFID(RFID);
+            Serial.println("Apres Rfid");
+            int str = 1;
+            for(int i = 0; i < NOMBRE_DE_PATIENTS; i++)
+            {
+                str = strcmp(ListePatient[i].rfid_code, RFID);
+                if(str == 0)
+                {
+                    PatientChoisi = i;
+                    break;
+                }
+            }
+            Serial.println(PatientChoisi);
+            Serial.println(StateRoom);
+            if(PatientChoisi == 0)
+            {
+                if(ListePatient[PatientChoisi].room_number == StateRoom)
+                {
+                    delay(200);
+                    AUDIO_PlayBlocking(a_Tremblay);
+                    delay(3500);
+                }
+                else
+                {
+                    StateStep = 3;
+                }
+            }
+            else if(PatientChoisi == 1)
+            {
+                if(ListePatient[PatientChoisi].room_number == StateRoom)
+                {
+                    delay(200);
+                    AUDIO_PlayBlocking(a_Gagnon);
+                    delay(3500);
+                }
+                else
+                {
+                    StateStep = 3;
+                }
+            }
+            else if(PatientChoisi == 2)
+            {
+                if(ListePatient[PatientChoisi].room_number == StateRoom)
+                {
+                    delay(200);
+                    AUDIO_PlayBlocking(a_Roy);
+                    delay(3500);
+                }
+                else
+                {
+                    StateStep = 3;
+                }   
+            }
+            else
+            {
+                StateStep = 3;
+            }
+            if(StateStep == 2)
+            {
+                AUDIO_PlayBlocking(a_Medication);
+
+                digitalWrite(greenButtonLED, HIGH);
+                digitalWrite(redButtonLED, HIGH);
+
+                answer = buttonResponse();
+
+                digitalWrite(greenButtonLED, LOW);
+                digitalWrite(redButtonLED, LOW);
+
+                if(ListePatient[PatientChoisi].distributed == false && answer == 2)
+                {
+                    ServoDropPills(RED_P, ListePatient[PatientChoisi].dailydrugs.red);
+                    ServoDropPills(BLACK_P, ListePatient[PatientChoisi].dailydrugs.green);
+                    ServoDropPills(BLUE_P, ListePatient[PatientChoisi].dailydrugs.blue);
+                    ServoDropPills(YELLOW_P, ListePatient[PatientChoisi].dailydrugs.yellow);
+                    AUDIO_PlayBlocking(a_Indication);
+                }
+                else if(answer == 1){
+                    StateStep = 1;
+                }
+                else
+                {
+                    StateStep = 3;
+                }
+            }
+            if(StateStep == 2)
+            {
+                AUDIO_PlayBlocking(a_Demande);
+
+                digitalWrite(greenButtonLED, HIGH);
+                digitalWrite(redButtonLED, HIGH);
+
+                answer = buttonResponse();
+
+                digitalWrite(greenButtonLED, LOW);
+                digitalWrite(redButtonLED, LOW);
+
+                if(answer == 2)
+                {
+                    AUDIO_PlayBlocking(a_Outroduction);
+                    StateStep = 1;
+                }
+                else
+                {
+                    AUDIO_PlayBlocking(a_Outroduction);
+                    StateStep = 3;
+                }
+            }
+        }
+        else
+        {
+            StateStep = 3;
+        }
+        StepSuiveur = 4;
+    }
+}
+
+void CheckRFID(char RFID_ID[50])
+{
+    int boucle = 1;
+    int incoming = 0;
+    char crecu = '0';
+    int i = 0;
+    while (boucle == 1)
+    {
+        if (Serial1.available())
+        {
+            crecu = Serial1.read(); // lit le ID-12
+            switch (crecu)
+            {
+            case 0x02:
+                // START OF TRANSMIT
+                AX_BuzzerON();
+                i = 0;
+                incoming = 1;
+                break;
+            case 0x03:
+                // END OF TRANSMIT
+                AX_BuzzerOFF();
+                RFID_ID[11] = '\0';
+                incoming = 0;
+                // Affiche le code recu sans valider le checksum
+                for (i = 0; i < 10; i++)
+                    Serial.print(RFID_ID[i]);
+                Serial.println("");
+                boucle = 0;
+                break;
+            default:
+                if (incoming)
+                    RFID_ID[i++] = crecu;
+                break;
+            }
+        }
+    }
 }
 
 void TimerUpdate()
 {
-  if (Timer == 100)
+    if (Timer % 500 == 0)
+    {
+        DS3231_get(&t);
+    }
+    if (Timer == 10000)
+    {
+        Timer = 0;
+    }
+    delay(5);
+    Timer += 5;
+}
+
+void data_initialisation(struct Patient Liste[5])
+{
+
+    strcpy(Liste[0].first_name, "Liam");
+    strcpy(Liste[0].last_name, "Tremblay");
+    Liste[0].room_number = 1;
+    strcpy(Liste[0].rfid_code, "0E008E6F32D"); 
+    Liste[0].dailydrugs.red = 0;
+    Liste[0].dailydrugs.green = 2;
+    Liste[0].dailydrugs.blue = 1;
+    Liste[0].dailydrugs.yellow = 0;
+    Liste[0].distributed = false;
+
+
+    strcpy(Liste[1].first_name, "Thomas");
+    strcpy(Liste[1].last_name, "Gagnon");
+    Liste[1].room_number = 2;
+    strcpy(Liste[1].rfid_code, "0E008E637F9"); //0E008E637F
+    Liste[1].dailydrugs.red = 1;
+    Liste[1].dailydrugs.green = 0;
+    Liste[1].dailydrugs.blue = 1;
+    Liste[1].dailydrugs.yellow = 1;
+    Liste[1].distributed = false;
+ 
+
+    strcpy(Liste[2].first_name, "Olivia");
+    strcpy(Liste[2].last_name, "Roy");
+    Liste[2].room_number = 3;
+    strcpy(Liste[2].rfid_code, "0F027D729D9"); //0F027D729D
+    Liste[2].dailydrugs.red = 0;
+    Liste[2].dailydrugs.green = 1;
+    Liste[2].dailydrugs.blue = 1;
+    Liste[2].dailydrugs.yellow = 2;
+    Liste[2].distributed = false;
+
+
+}
+
+int buttonResponse(){
+  int buttonState = -1;
+  int timerButton = 0;
+   while (buttonState == -1 && timerButton <= 10000)
+    {
+      delay(50);
+      buttonState = witchButton();
+      timerButton += 50;
+    }
+
+    return buttonState;
+}
+
+int witchButton()
+{
+
+  if (digitalRead(greenButton) == LOW)
   {
-    Timer = 0;
+    return 1;
   }
-  delay(5);
-  Timer += 5;
-}
-
-/** Function to accelerate exponentially to a certain distance
-
-@param distance, distance travelled in inches
-
-@param speed, represents direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-*/
-void MOVEMENTS_Accelerate(double distance, double speed)
-{
-  double acceleration;
-
-  MOVEMENTS_ResetEncoder();
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance);
-  int32_t currentEncoder = MOVEMENTS_ReadEncoder();
-
-  while (currentEncoder < targetEncoder)
+  else if (digitalRead(redButton) == LOW)
   {
-    currentEncoder = MOVEMENTS_ReadEncoder();
-    acceleration = MOVEMENTS_CalculateAcceleration(speed, currentEncoder, targetEncoder);
-
-    MOVEMENTS_Forward(acceleration);
+    return 2;
   }
-  MOVEMENTS_ResetEncoder();
-}
-
-/** Function to deccelerate exponentially to a certain distance
-
-@param distance, distance travelled in inches
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-*/
-void MOVEMENTS_Deccelerate(double distance, double speed)
-{
-  double decceleration;
-
-  MOVEMENTS_ResetEncoder();
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance);
-  int32_t currentEncoder = MOVEMENTS_ReadEncoder();
-
-  while (currentEncoder < targetEncoder)
-  {
-    currentEncoder = MOVEMENTS_ReadEncoder();
-    decceleration = MOVEMENTS_CalculateDecceleration(speed, currentEncoder, targetEncoder);
-
-    MOVEMENTS_Forward(decceleration);
-  }
-  MOVEMENTS_Stop();
-  MOVEMENTS_ResetEncoder();
-}
-
-/** Function to go accelerate until reached speed,
- * then deccelerate at the desired distance. 
-
-@param distance, distance travelled in inches
-
-@param speed, represents direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-*/
-void MOVEMENTS_Forward(double distance, double speed)
-{
-  MOVEMENTS_Accelerate(distance * .10, speed);
-
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .70);
-  int32_t currentEncoder = MOVEMENTS_ReadEncoder();
-
-  while (currentEncoder < targetEncoder)
-  {
-    currentEncoder = MOVEMENTS_ReadEncoder();
-    MOVEMENTS_Forward(speed);
-  }
-
-  MOVEMENTS_Deccelerate(distance * .20, speed);
-}
-
-/** Function to accelerate exponentially to a certain distance while turning
-
-@param direction, 0 left, 1 right
-
-@param distance, distance travelled in inches
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-*/
-void MOVEMENTS_AccelerateTurn(bool direction, double distance, double speed)
-{
-  double acceleration;
-
-  MOVEMENTS_ResetEncoder();
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance);
-  int32_t currentEncoder = MOVEMENTS_ReadAbsEncoder();
-
-  while (currentEncoder < targetEncoder)
-  {
-    currentEncoder = MOVEMENTS_ReadAbsEncoder();
-    acceleration = MOVEMENTS_CalculateAcceleration(speed, currentEncoder, targetEncoder);
-
-    if (direction)
-      MOVEMENTS_TurnRight(acceleration);
-    else
-      MOVEMENTS_TurnLeft(acceleration);
-  }
-  MOVEMENTS_ResetEncoder();
-}
-
-/** Function to deccelerate exponentially to a certain distance while turning
-
-@param direction, 0 left, 1 right
-
-@param distance, distance travelled in inches
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-*/
-void MOVEMENTS_DeccelerateTurn(bool direction, double distance, double speed)
-{
-  double decceleration;
-
-  MOVEMENTS_ResetEncoder();
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance);
-  int32_t currentEncoder = MOVEMENTS_ReadAbsEncoder();
-
-  while (currentEncoder < targetEncoder)
-  {
-    currentEncoder = MOVEMENTS_ReadAbsEncoder();
-    decceleration = MOVEMENTS_CalculateDecceleration(speed, currentEncoder, targetEncoder);
-
-    if (direction)
-      MOVEMENTS_TurnRight(decceleration);
-    else
-      MOVEMENTS_TurnLeft(decceleration);
-  }
-  MOVEMENTS_Stop();
-  MOVEMENTS_ResetEncoder();
-}
-
-/** Function to turn smoothly to a certain angle
-
-@param direction, 0 left, 1 right
-
-@param angle, angle in degrees
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-*/
-void MOVEMENTS_Turn(bool direction, double angle, double speed)
-{
-
-  double distance = MOVEMENTS_DistanceForAngle(direction, angle);
-
-  MOVEMENTS_AccelerateTurn(direction, distance * .20, speed);
-
-  int32_t targetEncoder = MOVEMENTS_EncoderForDistance(distance * .60);
-  int32_t currentEncoder = MOVEMENTS_ReadAbsEncoder();
-
-  while (currentEncoder < targetEncoder)
-  {
-    currentEncoder = MOVEMENTS_ReadAbsEncoder();
-    if (direction)
-      MOVEMENTS_TurnRight(speed);
-    else
-      MOVEMENTS_TurnLeft(speed);
-  }
-  MOVEMENTS_DeccelerateTurn(direction, distance * .20, speed);
-}
-
-/** Function to correct the right wheel based on the left wheel
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-
-*/
-double MOVEMENTS_SyncRightWheel(double speed)
-{
-  const double factor = 1.05;
-
-  double leftEncoder = abs(ENCODER_Read(0));
-  double rightEncoder = abs(ENCODER_Read(1));
-  if (leftEncoder == rightEncoder)
-    return speed;
-  else if (leftEncoder > rightEncoder + 1)
-    return speed * factor;
-  else if (leftEncoder < rightEncoder + 1)
-    return (speed - (speed * (factor - 1)));
-}
-
-/** Function to get the number of encoder ticks needed to reach a certain distance
-
-@param distance, distance travelled in inches
-
-*/
-double MOVEMENTS_EncoderForDistance(double distance)
-{
-  return (distance / WHEEL_CIRCONFERENCE) * 3200;
-}
-
-/** Function to get the number of distance to travel to reach a certain angle
-
-@param direction, 0 left, 1 right
-
-@param angle, angle in degrees
-
-*/
-double MOVEMENTS_DistanceForAngle(bool direction, double angle)
-{
-
-  if (direction)
-    return ROBOT_CIRCONFERENCE_RIGHT * (angle / 360);
-  return ROBOT_CIRCONFERENCE_LEFT * (angle / 360);
-}
-
-/** Function to calculate the acceleration based on the current encoder tick and the target encoder tick
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-
-@param currentEncoder, encoder tick at the instant
-
-@param targetEncoder, encoder tick to reach
-
-*/
-double MOVEMENTS_CalculateAcceleration(double speed, int32_t currentEncoder, int32_t targetEncoder)
-{
-  double acceleration = speed * currentEncoder / targetEncoder;
-
-  if (acceleration < MIN_SPEED)
-    acceleration = MIN_SPEED;
-
-  return acceleration;
-}
-
-/** Function to calculate the decceleration based on the current encoder tick and the target encoder tick
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-
-@param currentEncoder, encoder tick at the instant
-
-@param targetEncoder, encoder tick to reach
-
-*/
-double MOVEMENTS_CalculateDecceleration(double speed, int32_t currentEncoder, int32_t targetEncoder)
-{
-  double decceleration = speed - speed * currentEncoder / targetEncoder;
-
-  if (decceleration < MIN_SPEED)
-    decceleration = MIN_SPEED;
-
-  return decceleration;
-}
-
-/** Function to read the main encoder */
-int32_t MOVEMENTS_ReadEncoder()
-{
-  return ENCODER_Read(0);
-}
-
-/** Function to read the absolute value of the main encoder */
-int32_t MOVEMENTS_ReadAbsEncoder()
-{
-  return abs(ENCODER_Read(0));
-}
-
-/** Function to read the main encoder and the slave encoder */
-int32_t MOVEMENTS_ResetEncoder()
-{
-  ENCODER_ReadReset(0);
-  ENCODER_ReadReset(1);
-}
-
-/** Function to turn both wheel at the same time
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-
-*/
-void MOVEMENTS_Forward(double speed)
-{
-  MOTOR_SetSpeed(0, speed);
-  MOTOR_SetSpeed(1, MOVEMENTS_SyncRightWheel(speed));
-}
-
-/** Function to turn left using both wheel
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-
-*/
-void MOVEMENTS_TurnLeft(double speed)
-{
-  MOTOR_SetSpeed(0, -speed);
-  MOTOR_SetSpeed(1, MOVEMENTS_SyncRightWheel(speed));
-}
-
-/** Function to turn right using both wheel
-
-@param speed, represents the starting direction and amplitude of PWM
-floating value between [-1.0, 1.0]
-*/
-void MOVEMENTS_TurnRight(double speed)
-{
-  MOTOR_SetSpeed(0, speed);
-  MOTOR_SetSpeed(1, -MOVEMENTS_SyncRightWheel(speed));
-}
-
-/** Function to stop both wheel at the same time */
-void MOVEMENTS_Stop()
-{
-  MOTOR_SetSpeed(0, 0);
-  MOTOR_SetSpeed(1, 0);
-}
-
-bool isLineFollowingDone()
-{
-  return LineFollowerRightDone && LineFollowerLeftDone;
-}
-
-uint8_t GetCouleur()
-{
-  struct RGB Couleurs;
-  uint8_t Lecture = LectureCouleur(&Couleurs);
-  Serial.print(Lecture);
-  return Lecture;
+  return -1;
 }
