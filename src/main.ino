@@ -12,8 +12,8 @@
 #include "../lib/ds3231/ds3231.h"
 #include "ServoMoteur.h"
 
-#define COULEUR_CHAMBRE (0x02) // TODO Modifier pour la bonne couleur
-#define COULEUR_POSTE (0x05)   // TODO Modifier pour la bonne couleur
+#define COULEUR_CHAMBRE (0x02)
+#define COULEUR_POSTE (0x05)
 
 const int redButtonLED = 39;
 const int yellowLED = 41;
